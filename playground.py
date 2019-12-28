@@ -1,4 +1,3 @@
-import asyncio
 from pywinauto import Application
 
 app = Application(backend="uia")
