@@ -1,22 +1,22 @@
-import browser
-import url
-import time
+import asyncio
 
 
-def parser_callback(x):
-    print(x)
+async def find_games():
+    games = set()
+    while True:
+        print("...")
+        address = "https://lichess.org/nKQbaMxtQtb8"
+        if address not in games:
+            print("Found game:", address)
+            games.add(address)
+            asyncio.create_task(...)
+        await asyncio.sleep(5)
 
 
 def main():
-    while True:
-        print("Looking for URL")
-        address = url.get_browser_url()
-        if address:
-            print("Found", address)
-        address, site = url.verify_chess_url(address)
-        print("Starting browser for", site, "at", address)
-        loop = browser.pyppeteer_loop()
-        time.sleep(10)
+    loop = asyncio.get_event_loop()
+    loop.create_task(find_games())
+    loop.run_forever()
 
 
 main()
