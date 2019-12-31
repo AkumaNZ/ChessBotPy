@@ -3,15 +3,34 @@
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
-// @version     1.0
+// @version     1.1
 // @author      -
 // @description Lichess Spy
 // ==/UserScript==
 
+// Helper functions
+function docReady(fn) {
+	// see if DOM is already available
+	if (document.readyState === 'complete' || document.readyState === 'interactive') {
+		// call on next available tick
+		setTimeout(fn, 1);
+	} else {
+		document.addEventListener('DOMContentLoaded', fn);
+	}
+}
+
+// Global state
 let index = 0;
 let white = true;
 let move = '';
 let moves = [];
+
+// A new window is opened to allow a websocket connection, since the main page has a restricted CSP
+// this is just an alias to the document object of the main window
+let doc = window.document;
+if (window.opener != null) {
+	doc = window.opener.document;
+}
 
 var observer = new MutationObserver(mutations => {
 	for (let mutation of mutations) {
@@ -51,6 +70,7 @@ function parseMove(node) {
 		moves.push(newMove);
 		white = !white;
 		console.log(newMove);
+		ws.send(JSON.stringify(newMove));
 	}
 	// New turn
 	else if (node.nodeName === 'INDEX') {
@@ -63,36 +83,67 @@ function parseMove(node) {
 		moves.push(newMove);
 		white = !white;
 		console.log(newMove);
+		ws.send(JSON.stringify(newMove));
 	}
 	// Result (game ended)
 	else if (node.classList.contains('result-wrap')) {
 		console.log('Game ended!');
+		ws.send(JSON.stringify({ status: 'ended' }));
 	}
 }
 
-window.addEventListener('load', function() {
+const findGame = () => {
 	// Parse initial moves, before watching for mutations
-	let nodes = document.querySelector('.moves'); // Live game
+	let nodes = doc.querySelector('.moves'); // Live game
 	if (nodes == null) {
-		nodes = document.querySelector('.tview2'); // Analysis view
+		nodes = doc.querySelector('.tview2'); // Analysis view
 	}
 
 	if (nodes != null) {
 		console.log('Parsing initial moves');
 		for (let node of nodes.children) {
-			parsed = parseMove(node);
+			parseMove(node);
 		}
 	} else {
 		console.log('No intial moves to parse...');
 	}
 
-	if (document.querySelector('.rmoves') != null) {
-		observer.observe(document.querySelector('.rmoves'), { attributes: true, childList: true, subtree: true });
+	if (doc.querySelector('.rmoves') != null) {
+		observer.observe(doc.querySelector('.rmoves'), {
+			attributes: true,
+			childList: true,
+			subtree: true,
+		});
 		console.log('Attached mutation observer on rmoves');
-	} else if (document.querySelector('.tview2') != null) {
-		observer.observe(document.querySelector('.tview2'), { attributes: true, childList: true, subtree: true });
+	} else if (doc.querySelector('.tview2') != null) {
+		observer.observe(doc.querySelector('.tview2'), {
+			attributes: true,
+			childList: true,
+			subtree: true,
+		});
 		console.log('Attached mutation observer on tview2');
 	} else {
 		console.log('No target found for mutation observer to attach to');
+	}
+};
+
+docReady(() => {
+	// If not on popup and page has a valid game
+	if (
+		window.location != 'https://lichess.org/.bot' &&
+		(doc.querySelector('.rmoves') != null || doc.querySelector('.tview2') != null)
+	) {
+		window.open('https://lichess.org/.bot');
+	} else {
+		// Not declaring ws so that it becomes global
+		ws = new WebSocket('ws://127.0.0.1:5678');
+		ws.onopen = () => {
+			console.log('Connection estabished.');
+			ws.send(JSON.stringify({ status: 'opened', url: window.opener.location.href }));
+			findGame();
+			window.addEventListener('beforeunload', function(event) {
+				ws.close(1000, 'Closed window');
+			});
+		};
 	}
 });
