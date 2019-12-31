@@ -11,12 +11,20 @@
 // Helper functions
 function docReady(fn) {
 	// see if DOM is already available
-	if (document.readyState === 'complete' || document.readyState === 'interactive') {
-		// call on next available tick
-		setTimeout(fn, 1);
-	} else {
-		document.addEventListener('DOMContentLoaded', fn);
-	}
+	setTimeout(() => {
+		if (document.readyState === 'complete' || document.readyState === 'interactive') {
+			// call on next available tick
+			setTimeout(fn, 1);
+		} else {
+			document.addEventListener('DOMContentLoaded', fn);
+		}
+	}, 1000);
+}
+
+function log(msg) {
+	console.log(msg);
+	body = document.querySelector('body');
+	body.innerHTML += `<pre>${msg}</pre>`;
 }
 
 // Global state
@@ -56,7 +64,7 @@ var observer = new MutationObserver(mutations => {
 				index = parseInt(mutation.target.previousSibling.previousSibling.firstChild.textContent);
 				player = 'black';
 			}
-			console.log('Changed active target to:', index, player, move);
+			log(`Changed active target to: ${index} ${player} ${move}`);
 		}
 	}
 });
@@ -68,8 +76,8 @@ function parseMove(node) {
 		move = node.lastChild.firstChild.textContent;
 		newMove = { index, white, move };
 		moves.push(newMove);
+		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
-		console.log(newMove);
 		ws.send(JSON.stringify(newMove));
 	}
 	// New turn
@@ -81,13 +89,13 @@ function parseMove(node) {
 		move = node.firstChild.textContent;
 		newMove = { index, white, move };
 		moves.push(newMove);
+		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
-		console.log(newMove);
 		ws.send(JSON.stringify(newMove));
 	}
 	// Result (game ended)
 	else if (node.classList.contains('result-wrap')) {
-		console.log('Game ended!');
+		log('Game ended!');
 		ws.send(JSON.stringify({ status: 'ended' }));
 	}
 }
@@ -100,12 +108,12 @@ const findGame = () => {
 	}
 
 	if (nodes != null) {
-		console.log('Parsing initial moves');
+		log('Parsing initial moves');
 		for (let node of nodes.children) {
 			parseMove(node);
 		}
 	} else {
-		console.log('No intial moves to parse...');
+		log('No intial moves to parse...');
 	}
 
 	if (doc.querySelector('.rmoves') != null) {
@@ -114,31 +122,45 @@ const findGame = () => {
 			childList: true,
 			subtree: true,
 		});
-		console.log('Attached mutation observer on rmoves');
+		log('Attached mutation observer on ".rmoves"');
 	} else if (doc.querySelector('.tview2') != null) {
 		observer.observe(doc.querySelector('.tview2'), {
 			attributes: true,
 			childList: true,
 			subtree: true,
 		});
-		console.log('Attached mutation observer on tview2');
+		log('Attached mutation observer on ".tview2"');
 	} else {
-		console.log('No target found for mutation observer to attach to');
+		log('No target found for mutation observer to attach to');
 	}
 };
 
 docReady(() => {
 	// If not on popup and page has a valid game
 	if (
-		window.location != 'https://lichess.org/.bot' &&
-		(doc.querySelector('.rmoves') != null || doc.querySelector('.tview2') != null)
+		window.location.href != 'https://lichess.org/.bot' &&
+		(document.querySelector('.rmoves') != null || document.querySelector('.tview2') != null)
 	) {
-		window.open('https://lichess.org/.bot');
+		window.open('https://lichess.org/.bot', '_blank');
+		window.focus(); // Return back to main window (on FF at least)
 	} else {
 		// Not declaring ws so that it becomes global
 		ws = new WebSocket('ws://127.0.0.1:5678');
 		ws.onopen = () => {
-			console.log('Connection estabished.');
+			let body = document.querySelector('body');
+			body.innerHTML = `
+			<style>
+				body {
+					background: linear-gradient(rgb(46, 42, 36), rgb(22, 21, 18) 116px) no-repeat rgb(22, 21, 18);
+					color: rgb(186, 186, 186);
+					font-family: "Noto Sans", sans-serif;
+					font-size: 14px;
+				}
+				pre {
+					margin: 0px; 
+				}
+			</style>`;
+			log('Connection estabished.');
 			ws.send(JSON.stringify({ status: 'opened', url: window.opener.location.href }));
 			findGame();
 			window.addEventListener('beforeunload', function(event) {
