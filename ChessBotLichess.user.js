@@ -3,10 +3,26 @@
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
-// @version     1.1
-// @author      -
+// @version     1.2
+// @author      FallDownTheSystem
+// @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
 // @description Lichess Spy
 // ==/UserScript==
+
+// A new window is opened to allow a websocket connection, since the main page has a restricted CSP
+// this is just an alias to the document object of the main window
+let doc = window.document;
+if (window.opener != null) {
+	doc = window.opener.document;
+}
+
+// Global state
+let index = 0;
+let white = true;
+let move = '';
+let moves = [];
+let activeTarget = '';
+let uid = uuidv4();
 
 // Helper functions
 function docReady(fn) {
@@ -28,18 +44,15 @@ function log(...args) {
 	body.innerHTML += `<pre>${args.join(' ')}</pre>`;
 }
 
-// Global state
-let index = 0;
-let white = true;
-let move = '';
-let moves = [];
-let activeTarget = '';
+function uuidv4() {
+	return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+		(c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+	);
+}
 
-// A new window is opened to allow a websocket connection, since the main page has a restricted CSP
-// this is just an alias to the document object of the main window
-let doc = window.document;
-if (window.opener != null) {
-	doc = window.opener.document;
+function handleVisibilityChange() {
+	ws.send(JSON.stringify({ visible: !doc.hidden, uid }));
+	log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
 }
 
 var observer = new MutationObserver(mutations => {
@@ -165,9 +178,10 @@ docReady(() => {
 		window.focus(); // Return back to main window (on FF at least)
 	} else {
 		// Not declaring ws so that it becomes global
-		ws = new WebSocket(`ws://127.0.0.1:5678${window.opener.location.pathname}`);
+		ws = new WebSocket(`ws://127.0.0.1:5678/${uid}`);
 		ws.onopen = () => {
 			let body = document.querySelector('body');
+			window.document.title = `Client: ${window.opener.location.pathname}`;
 			body.innerHTML = `
 			<style>
 				body {
@@ -185,6 +199,7 @@ docReady(() => {
 			window.addEventListener('beforeunload', function(event) {
 				ws.close(1000, 'Closed window');
 			});
+			doc.addEventListener('visibilitychange', handleVisibilityChange, false);
 		};
 	}
 });
