@@ -158,7 +158,10 @@ docReady(() => {
 		window.location.href != 'https://lichess.org/.bot' &&
 		(document.querySelector('.rmoves') != null || document.querySelector('.tview2') != null)
 	) {
-		window.open('https://lichess.org/.bot', '_blank');
+		popup = window.open('https://lichess.org/.bot', '_blank');
+		window.addEventListener('beforeunload', function(event) {
+			popup.close();
+		});
 		window.focus(); // Return back to main window (on FF at least)
 	} else {
 		// Not declaring ws so that it becomes global
