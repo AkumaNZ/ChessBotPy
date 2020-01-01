@@ -9,6 +9,17 @@ speech = pyttsx3.init()
 speech.startLoop(False)
 print('Initialized TTS')
 
+digits = {
+    '1': 'one ',
+    '2': 'two ',
+    '3': 'three ',
+    '4': 'four ',
+    '5': 'five ',
+    '6': 'six ',
+    '7': 'seven ',
+    '8': 'eight ',
+}
+
 
 class GameObject():
     def __init__(self, board, engine, transport):
@@ -44,6 +55,8 @@ def parse_speech(move: str):
             castles_count += 1
         elif letter == '=':
             sentence += 'promotes to '
+        elif letter.isdigit():
+            sentence += digits[letter]
         else:
             if letter == 'a':
                 sentence += "aa "

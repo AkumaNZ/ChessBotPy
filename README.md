@@ -44,11 +44,18 @@ To be able connect to a websocket, a site must not have restricted content secur
     -   Ponder
     -   Forced lines
 
-**Drawing**
-
--   Using the built in drawing functions of sites to draw arrows
-
 ## Known issues:
 
 -   Lichess parser does not handle interrupts in analysis mode.
 -   Mutation observer attaching relies on one second time out on initial load
+
+## Todo
+
+-   Check if multiple engine processes can be running
+    -   Improve visiblity functionality so that engine is always shut down if page is not visible.
+-   Send messages from server back to client
+-   Figure out how to build template and run vue on it
+-   Implement some basic settings
+    -   Engine path
+-   Figure out how to configure engine
+-   Send full board state from JS always
