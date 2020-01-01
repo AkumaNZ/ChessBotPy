@@ -10,8 +10,9 @@
 
 // Helper functions
 function docReady(fn) {
-	// see if DOM is already available
+	// Set a one second timeout, just in case
 	setTimeout(() => {
+		// see if DOM is already available
 		if (document.readyState === 'complete' || document.readyState === 'interactive') {
 			// call on next available tick
 			setTimeout(fn, 1);
@@ -21,10 +22,10 @@ function docReady(fn) {
 	}, 1000);
 }
 
-function log(msg) {
-	console.log(msg);
+function log(...args) {
+	console.log(...args);
 	body = document.querySelector('body');
-	body.innerHTML += `<pre>${msg}</pre>`;
+	body.innerHTML += `<pre>${args.join(' ')}</pre>`;
 }
 
 // Global state
@@ -32,6 +33,7 @@ let index = 0;
 let white = true;
 let move = '';
 let moves = [];
+let activeTarget = '';
 
 // A new window is opened to allow a websocket connection, since the main page has a restricted CSP
 // this is just an alias to the document object of the main window
@@ -41,6 +43,16 @@ if (window.opener != null) {
 }
 
 var observer = new MutationObserver(mutations => {
+	attributeChanges = mutations.filter(x => x.type === 'attributes' && x.attributeName === 'class');
+	if (attributeChanges.length > 0) {
+		activeChanges = attributeChanges.filter(
+			x => (x.target.nodeName === 'MOVE' || x.target.nodeName === 'M2') && x.target.classList.contains('active')
+		);
+		if (activeChanges.length == 0 && activeTarget != 'starting-position') {
+			log(`Changed active target to: Starting position`);
+			activeTarget = `starting-position`;
+		}
+	}
 	for (let mutation of mutations) {
 		// Process new nodes
 		if (mutation.addedNodes.length) {
@@ -49,22 +61,8 @@ var observer = new MutationObserver(mutations => {
 			}
 		}
 		// Process 'active' change
-		else if (
-			mutation.type === 'attributes' &&
-			mutation.attributeName === 'class' &&
-			(mutation.target.nodeName === 'MOVE' || mutation.target.nodeName === 'M2') &&
-			mutation.target.classList.contains('active')
-		) {
-			let index = 0;
-			let move = mutation.target.firstChild.textContent;
-			let player = 'white';
-			if (mutation.target.previousSibling.nodeName === 'INDEX') {
-				index = parseInt(mutation.target.previousSibling.firstChild.textContent);
-			} else if (mutation.target.previousSibling.previousSibling.nodeName === 'INDEX') {
-				index = parseInt(mutation.target.previousSibling.previousSibling.firstChild.textContent);
-				player = 'black';
-			}
-			log(`Changed active target to: ${index} ${player} ${move}`);
+		else if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+			parseActiveStateChange(mutation.target);
 		}
 	}
 });
@@ -100,7 +98,26 @@ function parseMove(node) {
 	}
 }
 
-const findGame = () => {
+function parseActiveStateChange(node) {
+	if ((node.nodeName === 'MOVE' || node.nodeName === 'M2') && node.classList.contains('active')) {
+		let index = 0;
+		let move = node.firstChild.textContent;
+		let white = true;
+		if (node.previousSibling.nodeName === 'INDEX') {
+			index = parseInt(node.previousSibling.firstChild.textContent);
+		} else if (node.previousSibling.previousSibling.nodeName === 'INDEX') {
+			index = parseInt(node.previousSibling.previousSibling.firstChild.textContent);
+			white = false;
+		}
+		if (`${index}-${white}-${move}` != activeTarget) {
+			activeTarget = `${index}-${white}-${move}`;
+			log(`Changed active target to: ${index} ${white ? 'white' : 'black'} ${move}`);
+			return { index, white, move };
+		}
+	}
+}
+
+function findGame() {
 	// Parse initial moves, before watching for mutations
 	let nodes = doc.querySelector('.moves'); // Live game
 	if (nodes == null) {
@@ -133,7 +150,7 @@ const findGame = () => {
 	} else {
 		log('No target found for mutation observer to attach to');
 	}
-};
+}
 
 docReady(() => {
 	// If not on popup and page has a valid game
@@ -145,7 +162,7 @@ docReady(() => {
 		window.focus(); // Return back to main window (on FF at least)
 	} else {
 		// Not declaring ws so that it becomes global
-		ws = new WebSocket('ws://127.0.0.1:5678');
+		ws = new WebSocket(`ws://127.0.0.1:5678${window.opener.location.pathname}`);
 		ws.onopen = () => {
 			let body = document.querySelector('body');
 			body.innerHTML = `
@@ -161,7 +178,6 @@ docReady(() => {
 				}
 			</style>`;
 			log('Connection estabished.');
-			ws.send(JSON.stringify({ status: 'opened', url: window.opener.location.href }));
 			findGame();
 			window.addEventListener('beforeunload', function(event) {
 				ws.close(1000, 'Closed window');

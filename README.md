@@ -40,3 +40,8 @@ The basic operation of this bot is very simple
 -   FEN
 -   PGN
 -   Settings
+
+## Known issues:
+
+-   Lichess parser does not handle interrupts in analysis mode.
+-   Mutation observer attaching relies on one second time out on initial load
