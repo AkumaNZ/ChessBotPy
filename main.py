@@ -3,8 +3,9 @@ import websockets
 import chess
 import chess.engine
 import json
-
+import pyttsx3
 games = {}
+speech = pyttsx3.init()
 
 
 class GameObject():
@@ -12,6 +13,42 @@ class GameObject():
         self.board = board
         self.engine = engine
         self.transport = transport
+
+
+def parseSpeech(move: str):
+    castlesCount = 0
+    sentence = ''
+    for letter in move:
+        if letter == 'K':
+            sentence += "King "
+        elif letter == 'Q':
+            sentence += "Queen "
+        elif letter == 'R':
+            sentence += "Rook "
+        elif letter == 'B':
+            sentence += "Bishop "
+        elif letter == 'N':
+            sentence += "Knight "
+        elif letter == 'x':
+            sentence += "takes "
+        elif letter == '+':
+            sentence += "check "
+        elif letter == '#':
+            sentence += "mate "
+        elif letter == 'O' or letter == '-':
+            castlesCount += 1
+        elif letter == '=':
+            sentence += 'promotes to '
+        else:
+            if letter == 'a':
+                sentence += "aa "
+            else:
+                sentence += f'{letter} '
+        if castlesCount == 3:
+            sentence += 'castles'
+        elif castlesCount == 5:
+            sentence += "long castles"
+    return sentence
 
 
 async def handle_message(message, path):
@@ -28,7 +65,14 @@ async def handle_message(message, path):
         result = await games[path].engine.play(games[path].board,
                                                chess.engine.Limit(depth=8))
         print(games[path].board)
-        print("Best move:", games[path].board.san(result.move))
+        best_move = games[path].board.san(result.move)
+        if not data['history']:
+            tts = parseSpeech(best_move)
+            print(tts)
+            speech.stop()
+            speech.say(tts)
+            speech.runAndWait()
+        print("Best move:", best_move)
         print("Ponder:", games[path].board.san(result.ponder))
 
 

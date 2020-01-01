@@ -1,0 +1,17 @@
+appdirs==1.4.3
+comtypes==1.1.7
+entrypoints==0.3
+flake8==3.7.9
+mccabe==0.6.1
+pycodestyle==2.5.0
+pyee==6.0.0
+pyflakes==2.1.1
+pypiwin32==223
+python-chess==0.29.0
+pyttsx3==2.71
+pywin32==227
+six==1.13.0
+tqdm==4.41.0
+urllib3==1.25.7
+websockets==8.1
+yapf==0.29.0

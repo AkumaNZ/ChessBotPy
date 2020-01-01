@@ -57,7 +57,7 @@ var observer = new MutationObserver(mutations => {
 		// Process new nodes
 		if (mutation.addedNodes.length) {
 			for (node of mutation.addedNodes) {
-				parseMove(node);
+				parseMove(node, false);
 			}
 		}
 		// Process 'active' change
@@ -67,12 +67,12 @@ var observer = new MutationObserver(mutations => {
 	}
 });
 
-function parseMove(node) {
+function parseMove(node, history) {
 	// First move (initializing div.moves)
 	if (node.nodeName === 'DIV' && node.classList.contains('moves')) {
 		index = parseInt(node.firstChild.firstChild.textContent);
 		move = node.lastChild.firstChild.textContent;
-		newMove = { index, white, move };
+		newMove = { index, white, move, history };
 		moves.push(newMove);
 		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
@@ -85,7 +85,7 @@ function parseMove(node) {
 	// New move
 	else if (node.nodeName === 'MOVE' || node.nodeName === 'M2') {
 		move = node.firstChild.textContent;
-		newMove = { index, white, move };
+		newMove = { index, white, move, history };
 		moves.push(newMove);
 		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
@@ -127,7 +127,7 @@ function findGame() {
 	if (nodes != null) {
 		log('Parsing initial moves');
 		for (let node of nodes.children) {
-			parseMove(node);
+			parseMove(node, true);
 		}
 	} else {
 		log('No intial moves to parse...');
