@@ -6,6 +6,7 @@ import json
 import pyttsx3
 games = {}
 speech = pyttsx3.init()
+speech.startLoop(False)
 
 
 class GameObject():
@@ -15,8 +16,8 @@ class GameObject():
         self.transport = transport
 
 
-def parseSpeech(move: str):
-    castlesCount = 0
+def parse_speech(move: str):
+    castles_count = 0
     sentence = ''
     for letter in move:
         if letter == 'K':
@@ -36,7 +37,7 @@ def parseSpeech(move: str):
         elif letter == '#':
             sentence += "mate "
         elif letter == 'O' or letter == '-':
-            castlesCount += 1
+            castles_count += 1
         elif letter == '=':
             sentence += 'promotes to '
         else:
@@ -44,9 +45,9 @@ def parseSpeech(move: str):
                 sentence += "aa "
             else:
                 sentence += f'{letter} '
-        if castlesCount == 3:
+        if castles_count == 3 and len(move) < 5:
             sentence += 'castles'
-        elif castlesCount == 5:
+        elif castles_count == 5:
             sentence += "long castles"
     return sentence
 
@@ -67,11 +68,11 @@ async def handle_message(message, path):
         print(games[path].board)
         best_move = games[path].board.san(result.move)
         if not data['history']:
-            tts = parseSpeech(best_move)
-            print(tts)
+            tts = parse_speech(best_move)
+            # print(tts)
             speech.stop()
             speech.say(tts)
-            speech.runAndWait()
+            speech.iterate()
         print("Best move:", best_move)
         print("Ponder:", games[path].board.san(result.ponder))
 
@@ -79,7 +80,7 @@ async def handle_message(message, path):
 async def connection_handler(websocket, path):
     print("client connected", path)
     async for message in websocket:
-        print(message)
+        # print(message)
         await handle_message(message, path)
     print("Connection closed", path)
     del games[path]
@@ -88,3 +89,4 @@ async def connection_handler(websocket, path):
 start_server = websockets.serve(connection_handler, "127.0.0.1", 5678)
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
+speech.endLoop()
