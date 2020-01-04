@@ -4,10 +4,56 @@ import chess
 import chess.engine
 import json
 import pyttsx3
+from pynput import keyboard
+
+BLACK = 0
+WHITE = 1
+BOTH = 2
+NONE = 3
+
+# Global state
 games = {}
+side = BOTH
+connected = set()
 speech = pyttsx3.init()
 speech.startLoop(False)
 print('Initialized TTS')
+
+
+def on_activate_white():
+    # for ws in connected:
+    #     ws.send("Starting as white")
+    print('Starting as white')
+    global side
+    side = WHITE
+
+
+def on_activate_black():
+    # for ws in connected:
+    #     ws.send("Starting as black")
+    print('Starting as black')
+    global side
+    side = BLACK
+
+
+def on_activate_both():
+    # for ws in connected:
+    #     ws.send("Starting as both")
+    print('Starting as both')
+    global side
+    side = BOTH
+
+
+def on_deactivate():
+    # for ws in connected:
+    #     ws.send("Stopping")
+    print('Stopping')
+    global side
+    side = NONE
+
+
+listener = keyboard.GlobalHotKeys({'<alt>+s': on_deactivate, '<alt>+w': on_activate_white, '<alt>+a': on_activate_both, '<alt>+q': on_activate_black})
+listener.start()
 
 
 class GameObject():
@@ -112,7 +158,7 @@ async def handle_message(message, uid):
             game.engine = None
             game.transport = None
         # Run engine if there were any missed moves while game was not visible
-        if game.visible and game.missed_moves:
+        if game.visible and game.missed_moves and (game.board.turn == side or side == BOTH):
             await run_engine(uid)
 
     # Run initial moves
@@ -127,7 +173,7 @@ async def handle_message(message, uid):
 async def new_move(game, data, uid):
     game.board.push_san(data['move'])
     game.last_move = data
-    if game.visible:
+    if game.visible and (game.board.turn == side or side == BOTH):
         await run_engine(uid)
     else:
         print('Missed a move on:', uid)
@@ -136,11 +182,13 @@ async def new_move(game, data, uid):
 
 async def connection_handler(websocket, path):
     print("Client connected", path)
+    connected.add(websocket)
     async for message in websocket:
         # print(message)
         await handle_message(message, path)
     print("Connection closed", path)
     # Clean up
+    connected.remove(websocket)
     await games[path].engine.quit()
     del games[path]
 
@@ -150,3 +198,5 @@ asyncio.get_event_loop().run_until_complete(start_server)
 print("Looking for connections...")
 asyncio.get_event_loop().run_forever()
 speech.endLoop()
+for g in games:
+    g.engine.quit()

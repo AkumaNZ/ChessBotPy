@@ -28,7 +28,6 @@ To be able connect to a websocket, a site must not have restricted content secur
     -   Which side you're playing as
     -   Found game / url
     -   FEN
-    -   PGN
     -   Settings
     -   Console
 
@@ -49,14 +48,17 @@ To be able connect to a websocket, a site must not have restricted content secur
 -   Lichess parser does not handle interrupts in analysis mode.
 -   Mutation observer attaching relies on one second time out on initial load
     -   Change to a setTimeout loop until found
+-   Should we send full board state from JS every time?
 
 ## Todo
 
--   Check if multiple engine processes can be running
-    -   Improve visiblity functionality so that engine is always shut down if page is not visible.
+-   Hotkey support
+    -   Possibility to run bot only for one side or both, and to pause engine running
 -   Send messages from server back to client
--   Figure out how to build template and run vue on it
+-   Start building GUI on client side with Vue
+    -   Console
+    -   Show PV, CP, FEN
 -   Implement some basic settings
     -   Engine path
+    -   Playing as
 -   Figure out how to configure engine
--   Send full board state from JS always
