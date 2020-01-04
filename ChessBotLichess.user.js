@@ -3,7 +3,7 @@
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
-// @version     1.2
+// @version     1.3
 // @author      FallDownTheSystem
 // @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
 // @description Lichess Spy
@@ -20,7 +20,6 @@ if (window.opener != null) {
 let index = 0;
 let white = true;
 let move = '';
-let moves = [];
 let activeTarget = '';
 let uid = uuidv4();
 
@@ -51,7 +50,7 @@ function uuidv4() {
 }
 
 function handleVisibilityChange() {
-	ws.send(JSON.stringify({ visible: !doc.hidden, uid }));
+	ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden, uid }));
 	log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
 }
 
@@ -70,7 +69,10 @@ var observer = new MutationObserver(mutations => {
 		// Process new nodes
 		if (mutation.addedNodes.length) {
 			for (node of mutation.addedNodes) {
-				parseMove(node, false);
+				parsed = parseMove(node, false);
+				if (parsed != null) {
+					ws.send(JSON.stringify(parsed));
+				}
 			}
 		}
 		// Process 'active' change
@@ -85,11 +87,10 @@ function parseMove(node, history) {
 	if (node.nodeName === 'DIV' && node.classList.contains('moves')) {
 		index = parseInt(node.firstChild.firstChild.textContent);
 		move = node.lastChild.firstChild.textContent;
-		newMove = { index, white, move, history };
-		moves.push(newMove);
+		newMove = { type: 'move', index, white, move, history };
 		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
-		ws.send(JSON.stringify(newMove));
+		return newMove;
 	}
 	// New turn
 	else if (node.nodeName === 'INDEX') {
@@ -98,16 +99,15 @@ function parseMove(node, history) {
 	// New move
 	else if (node.nodeName === 'MOVE' || node.nodeName === 'M2') {
 		move = node.firstChild.textContent;
-		newMove = { index, white, move, history };
-		moves.push(newMove);
+		newMove = { type: 'move', index, white, move, history };
 		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
-		ws.send(JSON.stringify(newMove));
+		return newMove;
 	}
 	// Result (game ended)
 	else if (node.classList.contains('result-wrap')) {
 		log('Game ended!');
-		ws.send(JSON.stringify({ status: 'ended' }));
+		return { type: 'result', status: 'ended' };
 	}
 }
 
@@ -125,7 +125,7 @@ function parseActiveStateChange(node) {
 		if (`${index}-${white}-${move}` != activeTarget) {
 			activeTarget = `${index}-${white}-${move}`;
 			log(`Changed active target to: ${index} ${white ? 'white' : 'black'} ${move}`);
-			return { index, white, move };
+			return { type: 'history', index, white, move };
 		}
 	}
 }
@@ -139,8 +139,18 @@ function findGame() {
 
 	if (nodes != null) {
 		log('Parsing initial moves');
+		initialMoves = [];
+		// Get last item and don't mark it as history
 		for (let node of nodes.children) {
-			parseMove(node, true);
+			parsed = parseMove(node, true);
+			if (parsed != null) {
+				initialMoves.push(parsed);
+			}
+		}
+		if (initialMoves.length > 0) {
+			// Set last move as not history
+			initialMoves[initialMoves.length - 1].history = false;
+			ws.send(JSON.stringify({ type: 'initial', moves: initialMoves }));
 		}
 	} else {
 		log('No intial moves to parse...');

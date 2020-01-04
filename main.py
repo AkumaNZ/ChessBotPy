@@ -9,6 +9,18 @@ speech = pyttsx3.init()
 speech.startLoop(False)
 print('Initialized TTS')
 
+
+class GameObject():
+
+    def __init__(self, board, engine, transport):
+        self.board = board
+        self.engine = engine
+        self.transport = transport
+        self.visible = True
+        self.missed_moves = False
+        self.last_move = ''
+
+
 digits = {
     '1': 'one ',
     '2': 'two ',
@@ -19,16 +31,6 @@ digits = {
     '7': 'seven ',
     '8': 'eight ',
 }
-
-
-class GameObject():
-    def __init__(self, board, engine, transport):
-        self.board = board
-        self.engine = engine
-        self.transport = transport
-        self.visible = True
-        self.missed_moves = False
-        self.last_move = ''
 
 
 def parse_speech(move: str):
@@ -70,44 +72,66 @@ def parse_speech(move: str):
 
 
 async def run_engine(uid):
-    print(games[uid].board)
-    result = await games[uid].engine.play(games[uid].board,
-                                          chess.engine.Limit(depth=8))
-    best_move = games[uid].board.san(result.move)
-    if not games[uid].last_move['history']:
+    game = games[uid]
+    # print(game.board)
+    result = await game.engine.play(game.board, chess.engine.Limit(depth=8))
+    best_move = game.board.san(result.move)
+    if not game.last_move['history']:
         tts = parse_speech(best_move)
         # print(tts)
         speech.stop()
         speech.say(tts)
         speech.iterate()
+    # print("Ponder:", game.board.san(result.ponder))
     print("Best move:", best_move)
-    print("Ponder:", games[uid].board.san(result.ponder))
-    games[uid].missed_moves = False
+    game.missed_moves = False
 
 
 async def handle_message(message, uid):
+    # Initialize board and engine for new UIDs
     if uid not in games:
         board = chess.Board()
-        transport, engine = await chess.engine.popen_uci(
-            "C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
-
+        transport, engine = await chess.engine.popen_uci("C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
         games[uid] = GameObject(board, engine, transport)
-
+    # Alias for the game
+    game = games[uid]
+    # Parse json message to python
     data = json.loads(message)
-    if 'visible' in data:
-        games[uid].visible = data['visible']
-        print("Game", uid, "visible:", data['visible'])
-        if (games[uid].visible and games[uid].missed_moves):
+
+    if data['type'] == 'visibility':
+        game.visible = data['visible']
+        print(f"Game {uid} {'visible' if game.visible else 'hidden'}")
+        # Launch or close engine based on visibility
+        if game.visible:
+            if game.engine is None:
+                print('Launching engine.')
+                game.transport, game.engine = await chess.engine.popen_uci("C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
+        else:
+            print('Closing engine.')
+            await game.engine.quit()
+            game.engine = None
+            game.transport = None
+        # Run engine if there were any missed moves while game was not visible
+        if game.visible and game.missed_moves:
             await run_engine(uid)
 
-    if 'move' in data:
-        games[uid].board.push_san(data['move'])
-        games[uid].last_move = data
-        if games[uid].visible:
-            await run_engine(uid)
-        else:
-            print('Missed a move on:', uid)
-            games[uid].missed_moves = True
+    # Run initial moves
+    if data['type'] == 'initial':
+        for move in data['moves']:
+            await new_move(game, move, uid)
+
+    if data['type'] == 'move':
+        await new_move(game, data, uid)
+
+
+async def new_move(game, data, uid):
+    game.board.push_san(data['move'])
+    game.last_move = data
+    if game.visible:
+        await run_engine(uid)
+    else:
+        print('Missed a move on:', uid)
+        game.missed_moves = True
 
 
 async def connection_handler(websocket, path):
@@ -116,6 +140,8 @@ async def connection_handler(websocket, path):
         # print(message)
         await handle_message(message, path)
     print("Connection closed", path)
+    # Clean up
+    await games[path].engine.quit()
     del games[path]
 
 

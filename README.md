@@ -48,6 +48,7 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 -   Lichess parser does not handle interrupts in analysis mode.
 -   Mutation observer attaching relies on one second time out on initial load
+    -   Change to a setTimeout loop until found
 
 ## Todo
 
