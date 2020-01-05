@@ -52,8 +52,6 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Todo
 
--   Hotkey support
-    -   Possibility to run bot only for one side or both, and to pause engine running
 -   Send messages from server back to client
 -   Start building GUI on client side with Vue
     -   Console
@@ -62,3 +60,5 @@ To be able connect to a websocket, a site must not have restricted content secur
     -   Engine path
     -   Playing as
 -   Figure out how to configure engine
+-   Rewind history
+-   Fix analysis mode

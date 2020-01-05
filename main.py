@@ -2,8 +2,8 @@ import asyncio
 import websockets
 import chess
 import chess.engine
-import json
 import pyttsx3
+import jsonpickle
 
 BLACK = 0
 WHITE = 1
@@ -79,11 +79,11 @@ def parse_speech(move: str):
     return sentence
 
 
-async def run_engine(uid):
+async def run_engine(uid, ws):
     game = games[uid]
     if game.board.turn == game.side or game.side == BOTH:
         # print(game.board)
-        result = await game.engine.play(game.board, chess.engine.Limit(depth=8))
+        result = await game.engine.play(game.board, chess.engine.Limit(depth=8), game=uid, info=chess.engine.INFO_ALL)
         best_move = game.board.san(result.move)
         if not game.last_move['history']:
             tts = parse_speech(best_move)
@@ -94,18 +94,21 @@ async def run_engine(uid):
         # print("Ponder:", game.board.san(result.ponder))
         print("Best move:", best_move)
         game.missed_moves = False
+        frozen = jsonpickle.encode(result.info)
+        await ws.send(frozen)
 
 
-async def handle_message(message, uid):
+async def handle_message(message, uid, ws):
     # Initialize board and engine for new UIDs
     if uid not in games:
         board = chess.Board()
         transport, engine = await chess.engine.popen_uci("C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
         games[uid] = GameObject(board, engine, transport)
+        # print(engine.options._store)
     # Alias for the game
     game = games[uid]
     # Parse json message to python
-    data = json.loads(message)
+    data = jsonpickle.decode(message)
 
     if data['type'] == 'visibility':
         game.visible = data['visible']
@@ -122,7 +125,7 @@ async def handle_message(message, uid):
             game.transport = None
         # Run engine if there were any missed moves while game was not visible
         if game.visible and game.missed_moves:
-            await run_engine(uid)
+            await run_engine(uid, ws)
     # Hotkeys
     if data['type'] == 'hotkey':
         side = data['playing']
@@ -138,21 +141,21 @@ async def handle_message(message, uid):
             if game.engine is None:
                 print('Launching engine.')
                 game.transport, game.engine = await chess.engine.popen_uci("C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
-                await run_engine(uid)
+                await run_engine(uid, ws)
     # Run initial moves
     if data['type'] == 'initial':
         for move in data['moves']:
-            await new_move(game, move, uid)
+            await new_move(game, move, uid, ws)
 
     if data['type'] == 'move':
-        await new_move(game, data, uid)
+        await new_move(game, data, uid, ws)
 
 
-async def new_move(game, data, uid):
+async def new_move(game, data, uid, ws):
     game.board.push_san(data['move'])
     game.last_move = data
     if game.visible:
-        await run_engine(uid)
+        await run_engine(uid, ws)
     else:
         print('Missed a move on:', uid)
         game.missed_moves = True
@@ -162,7 +165,7 @@ async def connection_handler(websocket, path):
     print("Client connected", path)
     async for message in websocket:
         # print(message)
-        await handle_message(message, path)
+        await handle_message(message, path, websocket)
     print("Connection closed", path)
     # Clean up
     await games[path].engine.quit()

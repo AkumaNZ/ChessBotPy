@@ -205,11 +205,10 @@ docReady(() => {
 	} else {
 		// Not declaring ws so that it becomes global
 		ws = new WebSocket(`ws://127.0.0.1:5678/${uid}`);
+		ws.onmessage = function(event) {
+			console.log(JSON.parse(event.data));
+		};
 		ws.onopen = () => {
-			ws.onmessage = function(event) {
-				console.log(event);
-				log(event.data);
-			};
 			let body = document.querySelector('body');
 			window.document.title = `Client: ${window.opener.location.pathname}`;
 			body.innerHTML = `
