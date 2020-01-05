@@ -3,7 +3,7 @@
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
-// @version     1.4
+// @version     1.5
 // @author      FallDownTheSystem
 // @description Lichess Spy
 // ==/UserScript==
@@ -15,28 +15,13 @@ if (window.opener != null) {
 	doc = window.opener.document;
 }
 
-console.log(window.vue);
-
 // Global state
 let index = 0;
 let white = true;
 let move = '';
 let activeTarget = '';
 let uid = uuidv4();
-
-// Helper functions
-function docReady(fn) {
-	// Set a one second timeout, just in case
-	setTimeout(() => {
-		// see if DOM is already available
-		if (document.readyState === 'complete' || document.readyState === 'interactive') {
-			// call on next available tick
-			setTimeout(fn, 1);
-		} else {
-			document.addEventListener('DOMContentLoaded', fn);
-		}
-	}, 1000);
-}
+let ws = null;
 
 function log(...args) {
 	console.log(...args);
@@ -48,11 +33,6 @@ function uuidv4() {
 	return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
 		(c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
 	);
-}
-
-function handleVisibilityChange() {
-	ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden }));
-	log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
 }
 
 function hotkey(e) {
@@ -192,30 +172,62 @@ function findGame() {
 	}
 }
 
-docReady(() => {
-	// If not on popup and page has a valid game
-	if (
-		window.location.href != 'https://lichess.org/.bot' &&
-		(document.querySelector('.rmoves') != null || document.querySelector('.tview2') != null)
-	) {
+const connect = url => {
+	return new Promise((resolve, reject) => {
+		const ws = new WebSocket(url);
+		ws.onopen = () => resolve(ws);
+		ws.onerror = err => reject(err);
+	});
+};
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const waitForElement = async selector => {
+	while (true) {
+		const element = document.querySelector(selector);
+		if (element != null) {
+			return element;
+		}
+		await sleep(100);
+	}
+};
+
+const loadScript = url => {
+	return new Promise((resolve, reject) => {
+		const scriptElement = document.createElement('script');
+		scriptElement.src = url;
+		scriptElement.onload = event => resolve(event);
+		scriptElement.onerror = err => reject(err);
+		const head = document.getElementsByTagName('head')[0];
+		head.appendChild(scriptElement);
+	});
+};
+
+const loadInlineScript = async code => {
+	const scriptElement = document.createElement('script');
+	const textNode = document.createTextNode(code);
+	scriptElement.appendChild(textNode);
+	const head = document.getElementsByTagName('head')[0];
+	head.appendChild(scriptElement);
+	await sleep(1);
+};
+
+const main = async () => {
+	if (window.location.href != 'https://lichess.org/.bot') {
+		await Promise.race([waitForElement('.rmoves'), waitForElement('.tview2')]);
 		popup = window.open('https://lichess.org/.bot', '_blank');
 		window.addEventListener('beforeunload', function(event) {
 			popup.close();
 		});
 		window.focus(); // Return back to main window (on FF at least)
-	} else {
-		// Not declaring ws so that it becomes global
-		ws = new WebSocket(`ws://127.0.0.1:5678/${uid}`);
-		ws.onmessage = function(event) {
-			console.log(JSON.parse(event.data));
-		};
-		ws.onopen = () => {
-			let body = document.querySelector('body');
-			window.document.title = `Client: ${window.opener.location.pathname}`;
-			body.innerHTML = `
+		return;
+	}
+	debugger;
+	window.document.title = `Client: ${window.opener.location.pathname}`;
+	let body = document.getElementsByTagName('body')[0];
+	body.innerHTML = `
 <div id="app">
-	<div id="console">
-	</div>
+	<div id="console"></div>
 	{{ message }}
 </div>
 <style>
@@ -230,30 +242,28 @@ docReady(() => {
 	}
 </style>`;
 
-			var vuescript = document.createElement('script');
-			vuescript.src = 'https://cdn.jsdelivr.net/npm/vue/dist/vue.js';
-			body.appendChild(vuescript);
-			setTimeout(() => {
-				var newScript = document.createElement('script');
-				var inlineScript = document.createTextNode(`
-var app = new Vue({
-	el: '#app',
-	data: {
-		message: 'Hello Vue!'
-	}
-})
-`);
-				newScript.appendChild(inlineScript);
-				body.appendChild(newScript);
-			}, 2000);
+	ws = await connect(`ws://127.0.0.1:5678/${uid}`);
+	log('Connection estabished.');
+	ws.onmessage = function(event) {
+		console.log(JSON.parse(event.data));
+	};
 
-			log('Connection estabished.');
-			findGame();
-			window.addEventListener('beforeunload', function(event) {
-				ws.close(1000, 'Closed window');
-			});
-			doc.addEventListener('visibilitychange', handleVisibilityChange, false);
-			doc.addEventListener('keydown', hotkey);
-		};
-	}
-});
+	await loadScript('https://cdn.jsdelivr.net/npm/vue/dist/vue.js');
+
+	await loadInlineScript(`
+		var app = new Vue({
+			el: '#app',
+			data: {
+				message: 'Hello Vue!'
+			}
+		})`);
+
+	doc.addEventListener('visibilitychange', () => {
+		ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden }));
+		log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
+	});
+	doc.addEventListener('keydown', hotkey);
+	findGame();
+};
+
+main();
