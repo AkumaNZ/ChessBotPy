@@ -4,6 +4,11 @@ import chess
 import chess.engine
 import pyttsx3
 import jsonpickle
+import configparser
+
+# Load configurations
+config = configparser.ConfigParser()
+config.read('settings.ini')
 
 BLACK = 0
 WHITE = 1
@@ -26,7 +31,8 @@ class GameObject():
         self.visible = True
         self.missed_moves = False
         self.last_move = ''
-        self.side = BOTH
+        self.side = int(config['gui']['DefaultSide'])
+        self.voice = config['gui']['DefaultVoiceEnabled'] == 'true'
 
 
 digits = {
@@ -98,12 +104,23 @@ async def run_engine(uid, ws):
         await ws.send(frozen)
 
 
+async def configure_engine(uid):
+    engine = games[uid].engine
+    if engine is not None:
+        for key, value in config['engine'].items():
+            option = engine.options[key]
+            print(option)
+            if not option.is_managed():
+                await engine.configure({key: value})
+
+
 async def handle_message(message, uid, ws):
     # Initialize board and engine for new UIDs
     if uid not in games:
         board = chess.Board()
-        transport, engine = await chess.engine.popen_uci("C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
+        transport, engine = await chess.engine.popen_uci(config['gui']['EnginePath'])
         games[uid] = GameObject(board, engine, transport)
+        await configure_engine(uid)
         # print(engine.options._store)
     # Alias for the game
     game = games[uid]
@@ -117,7 +134,8 @@ async def handle_message(message, uid, ws):
         if game.visible:
             if game.engine is None:
                 print('Launching engine.')
-                game.transport, game.engine = await chess.engine.popen_uci("C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
+                game.transport, game.engine = await chess.engine.popen_uci(config['gui']['EnginePath'])
+                await configure_engine(uid)
         else:
             print('Closing engine.')
             await game.engine.quit()
@@ -141,6 +159,7 @@ async def handle_message(message, uid, ws):
             if game.engine is None:
                 print('Launching engine.')
                 game.transport, game.engine = await chess.engine.popen_uci("C:\\Users\\Juugo\\Desktop\\pychess\\engine\\BrainFish.exe")
+                await configure_engine(uid)
                 await run_engine(uid, ws)
     # Run initial moves
     if data['type'] == 'initial':
