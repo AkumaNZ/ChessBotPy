@@ -2,6 +2,7 @@ import asyncio
 import websockets
 import chess
 import chess.engine
+import chess.svg
 import pyttsx3
 import jsonpickle
 import configparser
@@ -90,6 +91,7 @@ async def run_engine(uid, ws):
     if game.board.turn == game.side or game.side == BOTH:
         # print(game.board)
         result = await game.engine.play(game.board, chess.engine.Limit(depth=8), game=uid, info=chess.engine.INFO_ALL)
+        # Send board + result as SVG back to client here, include few moves with arrows color coded rainbow
         best_move = game.board.san(result.move)
         if not game.last_move['history']:
             tts = parse_speech(best_move)
@@ -172,6 +174,7 @@ async def handle_message(message, uid, ws):
 
 async def new_move(game, data, uid, ws):
     game.board.push_san(data['move'])
+    svg = chess.svg.board(board=game.board)
     game.last_move = data
     if game.visible:
         await run_engine(uid, ws)

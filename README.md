@@ -14,11 +14,17 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Planned features
 
+**Site support**
+
+-   Support analysis mode properly on lichess
+    -   Including variations
+-   Support for Chess.com
+-   Support for Chess24
+
 **Interface**
 
 -   Read out ponder
 -   Read out a move ahead if there is a forced line
--   Only read out moves for one side
 -   GUI
     -   Priciple variation lines
         -   Multiple principle variations if they they are within x centipawns of each other
@@ -30,35 +36,43 @@ To be able connect to a websocket, a site must not have restricted content secur
     -   FEN
     -   Settings
     -   Console
+    -   SVG representation of the board
+        -   draw PV lines
+            -   Each line is a different color
+            -   each move ahead shifts/fades/transparency the color a bit
+            -   Settings for SVG stuff
 
 **Configurations**
 
 -   Settings files
--   Engine path
--   Engine settings
+    -   Different files for engine and GUI
+    -   Generate engine.ini automatically
+        -   Base engine setting file off of selected engine
 -   Depth / Time
+    -   Advanced settings
+        -   Stage of game, etc.
 -   Output options
     -   Text
     -   Voice
-    -   Ponder
-    -   Forced lines
+    -   SVG
 
 ## Known issues:
 
 -   Lichess parser does not handle interrupts in analysis mode.
 -   Mutation observer attaching relies on one second time out on initial load
     -   Change to a setTimeout loop until found
+-   Loading vue relies on two second setTimeout as well
 -   Should we send full board state from JS every time?
 
 ## Todo
 
--   Send messages from server back to client
 -   Start building GUI on client side with Vue
     -   Console
     -   Show PV, CP, FEN
--   Implement some basic settings
-    -   Engine path
-    -   Playing as
--   Figure out how to configure engine
--   Rewind history
--   Fix analysis mode
+    -   Implement some basic settings
+        -   Engine path
+        -   Playing as
+    -   SVG Board
+    -   Engine settings
+        -   Auto generated
+    -   GUI settings

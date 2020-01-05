@@ -3,9 +3,8 @@
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
-// @version     1.3
+// @version     1.4
 // @author      FallDownTheSystem
-// @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
 // @description Lichess Spy
 // ==/UserScript==
 
@@ -15,6 +14,8 @@ let doc = window.document;
 if (window.opener != null) {
 	doc = window.opener.document;
 }
+
+console.log(window.vue);
 
 // Global state
 let index = 0;
@@ -39,7 +40,7 @@ function docReady(fn) {
 
 function log(...args) {
 	console.log(...args);
-	body = document.querySelector('body');
+	body = document.querySelector('#console');
 	body.innerHTML += `<pre>${args.join(' ')}</pre>`;
 }
 
@@ -212,17 +213,40 @@ docReady(() => {
 			let body = document.querySelector('body');
 			window.document.title = `Client: ${window.opener.location.pathname}`;
 			body.innerHTML = `
-			<style>
-				body {
-					background: linear-gradient(rgb(46, 42, 36), rgb(22, 21, 18) 116px) no-repeat rgb(22, 21, 18);
-					color: rgb(186, 186, 186);
-					font-family: "Noto Sans", sans-serif;
-					font-size: 14px;
-				}
-				pre {
-					margin: 0px; 
-				}
-			</style>`;
+<div id="app">
+	<div id="console">
+	</div>
+	{{ message }}
+</div>
+<style>
+	body {
+		background: linear-gradient(rgb(46, 42, 36), rgb(22, 21, 18) 116px) no-repeat rgb(22, 21, 18);
+		color: rgb(186, 186, 186);
+		font-family: "Noto Sans", sans-serif;
+		font-size: 14px;
+	}
+	pre {
+		margin: 0px; 
+	}
+</style>`;
+
+			var vuescript = document.createElement('script');
+			vuescript.src = 'https://cdn.jsdelivr.net/npm/vue/dist/vue.js';
+			body.appendChild(vuescript);
+			setTimeout(() => {
+				var newScript = document.createElement('script');
+				var inlineScript = document.createTextNode(`
+var app = new Vue({
+	el: '#app',
+	data: {
+		message: 'Hello Vue!'
+	}
+})
+`);
+				newScript.appendChild(inlineScript);
+				body.appendChild(newScript);
+			}, 2000);
+
 			log('Connection estabished.');
 			findGame();
 			window.addEventListener('beforeunload', function(event) {
