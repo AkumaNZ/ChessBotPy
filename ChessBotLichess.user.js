@@ -50,8 +50,24 @@ function uuidv4() {
 }
 
 function handleVisibilityChange() {
-	ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden, uid }));
+	ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden }));
 	log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
+}
+
+function hotkey(e) {
+	if (e.altKey && e.code === 'KeyW') {
+		log('Playing as white');
+		ws.send(JSON.stringify({ type: 'hotkey', playing: 1 }));
+	} else if (e.altKey && e.code === 'KeyQ') {
+		log('Playing as black');
+		ws.send(JSON.stringify({ type: 'hotkey', playing: 0 }));
+	} else if (e.altKey && e.code === 'KeyA') {
+		log('Playing as Both');
+		ws.send(JSON.stringify({ type: 'hotkey', playing: 2 }));
+	} else if (e.altKey && e.code === 'KeyS') {
+		log('Stopping');
+		ws.send(JSON.stringify({ type: 'hotkey', playing: 3 }));
+	}
 }
 
 var observer = new MutationObserver(mutations => {
@@ -214,6 +230,7 @@ docReady(() => {
 				ws.close(1000, 'Closed window');
 			});
 			doc.addEventListener('visibilitychange', handleVisibilityChange, false);
+			doc.addEventListener('keydown', hotkey);
 		};
 	}
 });
