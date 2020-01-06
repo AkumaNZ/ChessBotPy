@@ -23,12 +23,6 @@ let activeTarget = '';
 let uid = uuidv4();
 let ws = null;
 
-function log(...args) {
-	console.log(...args);
-	body = document.querySelector('#console');
-	body.innerHTML += `<pre>${args.join(' ')}</pre>`;
-}
-
 function uuidv4() {
 	return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
 		(c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
@@ -49,6 +43,12 @@ function hotkey(e) {
 		log('Stopping');
 		ws.send(JSON.stringify({ type: 'hotkey', playing: 3 }));
 	}
+}
+
+function log(...args) {
+	console.log(...args);
+	body = document.querySelector('#console');
+	body.innerHTML += `<pre>${args.join(' ')}</pre>`;
 }
 
 var observer = new MutationObserver(mutations => {
@@ -198,8 +198,22 @@ const loadScript = url => {
 		scriptElement.src = url;
 		scriptElement.onload = event => resolve(event);
 		scriptElement.onerror = err => reject(err);
-		const head = document.getElementsByTagName('head')[0];
+		const head = document.querySelector('head');
 		head.appendChild(scriptElement);
+	});
+};
+
+const loadCSS = url => {
+	return new Promise((resolve, reject) => {
+		const linkElement = document.createElement('link');
+		linkElement.rel = 'stylesheet';
+		linkElement.type = 'text/css';
+		linkElement.href = url;
+		linkElement.media = 'all';
+		linkElement.onload = event => resolve(event);
+		linkElement.onerror = err => reject(err);
+		const head = document.querySelector('head');
+		head.appendChild(linkElement);
 	});
 };
 
@@ -207,7 +221,7 @@ const loadInlineScript = async code => {
 	const scriptElement = document.createElement('script');
 	const textNode = document.createTextNode(code);
 	scriptElement.appendChild(textNode);
-	const head = document.getElementsByTagName('head')[0];
+	const head = document.querySelector('head');
 	head.appendChild(scriptElement);
 	await sleep(1);
 };
@@ -226,27 +240,27 @@ const main = async () => {
 	window.document.title = `Client: ${window.opener.location.pathname}`;
 	let body = document.getElementsByTagName('body')[0];
 	body.innerHTML = `
-<div id="app">
-	<div id="console"></div>
-	{{ message }}
-</div>
-<style>
-	body {
-		background: linear-gradient(rgb(46, 42, 36), rgb(22, 21, 18) 116px) no-repeat rgb(22, 21, 18);
-		color: rgb(186, 186, 186);
-		font-family: "Noto Sans", sans-serif;
-		font-size: 14px;
-	}
-	pre {
-		margin: 0px; 
-	}
-</style>`;
+	<div id="app">
+		{{ message }}
+		<button class="button">Button</button>
+		<div id="console"></div>
+	</div>
+	<style>
+		body {
+			background: linear-gradient(rgb(46, 42, 36), rgb(22, 21, 18) 116px) no-repeat rgb(22, 21, 18);
+			color: rgb(186, 186, 186);
+			font-family: "Noto Sans", sans-serif;
+			font-size: 14px;
+		}
+	</style>`;
 
 	ws = await connect(`ws://127.0.0.1:5678/${uid}`);
 	log('Connection estabished.');
 	ws.onmessage = function(event) {
 		console.log(JSON.parse(event.data));
 	};
+
+	await loadCSS('https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css');
 
 	await loadScript('https://cdn.jsdelivr.net/npm/vue/dist/vue.js');
 

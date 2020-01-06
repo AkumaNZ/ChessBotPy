@@ -59,20 +59,20 @@ To be able connect to a websocket, a site must not have restricted content secur
 ## Known issues:
 
 -   Lichess parser does not handle interrupts in analysis mode.
--   Mutation observer attaching relies on one second time out on initial load
-    -   Change to a setTimeout loop until found
--   Loading vue relies on two second setTimeout as well
 -   Should we send full board state from JS every time?
+-   Auto managed settings are saved to settings file?
 
 ## Todo
 
--   Start building GUI on client side with Vue
-    -   Console
-    -   Show PV, CP, FEN
-    -   Implement some basic settings
-        -   Engine path
-        -   Playing as
+-   Create a CSS Grid, 2x2 layout
+    -   Main info and buttons
+        -   Show PVs, CP, FEN
+        -   Start, play as
+        -   Open engine settings
+        -   Depth / Time setting
     -   SVG Board
-    -   Engine settings
-        -   Auto generated
-    -   GUI settings
+    -   Console
+    -   Open space for stuff to open to
+        -   Engine settings, etc
+-   Send in necessary information from server
+-   Create a on message parser, that will feed data to vue

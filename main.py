@@ -6,6 +6,7 @@ import chess.svg
 import pyttsx3
 import jsonpickle
 import configparser
+import os
 
 # Load configurations
 config = configparser.ConfigParser()
@@ -32,8 +33,8 @@ class GameObject():
         self.visible = True
         self.missed_moves = False
         self.last_move = ''
-        self.side = int(config['gui']['DefaultSide'])
-        self.voice = config['gui']['DefaultVoiceEnabled'] == 'true'
+        self.side = int(config['GUI']['side'])
+        self.voice = config['GUI']['voiceenabled'].lower() == 'true'
 
 
 digits = {
@@ -109,18 +110,27 @@ async def run_engine(uid, ws):
 async def configure_engine(uid):
     engine = games[uid].engine
     if engine is not None:
-        for key, value in config['engine'].items():
-            option = engine.options[key]
-            print(option)
-            if not option.is_managed():
-                await engine.configure({key: value})
+        base = os.path.basename(config['gui']['enginepath'])  # FIX ME! Error handling
+        engine_name = os.path.splitext(base)[0]
+
+        if engine_name in config.sections():
+            for key, value in config[engine_name].items():
+                option = engine.options[key]
+                if not option.is_managed():
+                    await engine.configure({key: value})
+        else:  # Add default values for selected engine to settings.ini
+            config[engine_name] = {}
+            for key, default_value in engine.config._store.values():
+                config[engine_name][key] = str(default_value)  # Default value
+            with open('settings.ini', 'w+') as configfile:
+                config.write(configfile)
 
 
 async def handle_message(message, uid, ws):
     # Initialize board and engine for new UIDs
     if uid not in games:
         board = chess.Board()
-        transport, engine = await chess.engine.popen_uci(config['gui']['EnginePath'])
+        transport, engine = await chess.engine.popen_uci(config['gui']['enginepath'])
         games[uid] = GameObject(board, engine, transport)
         await configure_engine(uid)
         # print(engine.options._store)
@@ -136,7 +146,7 @@ async def handle_message(message, uid, ws):
         if game.visible:
             if game.engine is None:
                 print('Launching engine.')
-                game.transport, game.engine = await chess.engine.popen_uci(config['gui']['EnginePath'])
+                game.transport, game.engine = await chess.engine.popen_uci(config['GUI']['EnginePath'])
                 await configure_engine(uid)
         else:
             print('Closing engine.')
@@ -174,7 +184,7 @@ async def handle_message(message, uid, ws):
 
 async def new_move(game, data, uid, ws):
     game.board.push_san(data['move'])
-    svg = chess.svg.board(board=game.board)
+    # svg = chess.svg.board(board=game.board)
     game.last_move = data
     if game.visible:
         await run_engine(uid, ws)
@@ -190,8 +200,10 @@ async def connection_handler(websocket, path):
         await handle_message(message, path, websocket)
     print("Connection closed", path)
     # Clean up
-    await games[path].engine.quit()
-    del games[path]
+    if path in games:
+        if games[path].engine is not None:
+            await games[path].engine.quit()
+        del games[path]
 
 
 start_server = websockets.serve(connection_handler, "127.0.0.1", 5678)
@@ -200,5 +212,6 @@ print("Looking for connections...")
 asyncio.get_event_loop().run_forever()
 # Clean up
 speech.endLoop()
-for g in games:
-    g.engine.quit()
+for game in games:
+    if game.engine is not None:
+        game.engine.quit()
