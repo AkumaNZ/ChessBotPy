@@ -10,6 +10,7 @@ import os
 
 # Load configurations
 config = configparser.ConfigParser()
+engine_config = configparser.ConfigParser()
 config.read('settings.ini')
 
 BLACK = 0
@@ -110,27 +111,28 @@ async def run_engine(uid, ws):
 async def configure_engine(uid):
     engine = games[uid].engine
     if engine is not None:
-        base = os.path.basename(config['gui']['enginepath'])  # FIX ME! Error handling
-        engine_name = os.path.splitext(base)[0]
-
-        if engine_name in config.sections():
-            for key, value in config[engine_name].items():
+        if "engine" not in engine_config.sections():
+            base = os.path.basename(config['GUI']['enginepath'])  # FIX ME! Error handling
+            engine_name = os.path.splitext(base)[0]
+            engine_config.read(engine_name + ".ini")
+        if "engine" in engine_config.sections():
+            for key, value in engine_config["engine"].items():
                 option = engine.options[key]
                 if not option.is_managed():
                     await engine.configure({key: value})
         else:  # Add default values for selected engine to settings.ini
-            config[engine_name] = {}
+            engine_config["engine"] = {}
             for key, default_value in engine.config._store.values():
-                config[engine_name][key] = str(default_value)  # Default value
-            with open('settings.ini', 'w+') as configfile:
-                config.write(configfile)
+                engine_config["engine"][key] = str(default_value)  # Default value
+            with open(engine_name + ".ini", 'w+') as configfile:
+                engine_config.write(configfile)
 
 
 async def handle_message(message, uid, ws):
     # Initialize board and engine for new UIDs
     if uid not in games:
         board = chess.Board()
-        transport, engine = await chess.engine.popen_uci(config['gui']['enginepath'])
+        transport, engine = await chess.engine.popen_uci(config['GUI']['enginepath'])
         games[uid] = GameObject(board, engine, transport)
         await configure_engine(uid)
         # print(engine.options._store)
@@ -183,27 +185,35 @@ async def handle_message(message, uid, ws):
 
 
 async def new_move(game, data, uid, ws):
-    game.board.push_san(data['move'])
-    # svg = chess.svg.board(board=game.board)
-    game.last_move = data
-    if game.visible:
-        await run_engine(uid, ws)
-    else:
-        print('Missed a move on:', uid)
-        game.missed_moves = True
+    if 'move' in data:
+        game.board.push_san(data['move'])
+        # svg = chess.svg.board(board=game.board)
+        game.last_move = data
+        if game.visible:
+            await run_engine(uid, ws)
+        else:
+            print('Missed a move on:', uid)
+            game.missed_moves = True
 
 
 async def connection_handler(websocket, path):
-    print("Client connected", path)
-    async for message in websocket:
-        # print(message)
-        await handle_message(message, path, websocket)
-    print("Connection closed", path)
-    # Clean up
-    if path in games:
-        if games[path].engine is not None:
-            await games[path].engine.quit()
-        del games[path]
+    try:
+        print("Client connected", path)
+        async for message in websocket:
+            # print(message)
+            await handle_message(message, path, websocket)
+        print("Connection closed", path)
+        # Clean up
+        if path in games:
+            if games[path].engine is not None:
+                await games[path].engine.quit()
+            del games[path]
+    except websockets.ConnectionClosed as err:
+        print(err)
+        if path in games:
+            if games[path].engine is not None:
+                await games[path].engine.quit()
+            del games[path]
 
 
 start_server = websockets.serve(connection_handler, "127.0.0.1", 5678)

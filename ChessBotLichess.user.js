@@ -3,7 +3,7 @@
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
-// @version     1.5
+// @version     1.6
 // @author      FallDownTheSystem
 // @description Lichess Spy
 // ==/UserScript==
@@ -48,7 +48,7 @@ function hotkey(e) {
 function log(...args) {
 	console.log(...args);
 	body = document.querySelector('#console');
-	body.innerHTML += `<pre>${args.join(' ')}</pre>`;
+	body.innerHTML += `<p>${args.join(' ')}</p>`;
 }
 
 var observer = new MutationObserver(mutations => {
@@ -127,8 +127,9 @@ function parseActiveStateChange(node) {
 	}
 }
 
-function findGame() {
+const findGame = async () => {
 	// Parse initial moves, before watching for mutations
+	await Promise.race([waitForElement('move'), waitForElement('m2')]);
 	let nodes = doc.querySelector('.moves'); // Live game
 	if (nodes == null) {
 		nodes = doc.querySelector('.tview2'); // Analysis view
@@ -170,7 +171,7 @@ function findGame() {
 	} else {
 		log('No target found for mutation observer to attach to');
 	}
-}
+};
 
 const connect = url => {
 	return new Promise((resolve, reject) => {
@@ -184,7 +185,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const waitForElement = async selector => {
 	while (true) {
-		const element = document.querySelector(selector);
+		const element = doc.querySelector(selector);
 		if (element != null) {
 			return element;
 		}
@@ -236,21 +237,69 @@ const main = async () => {
 		window.focus(); // Return back to main window (on FF at least)
 		return;
 	}
-	debugger;
 	window.document.title = `Client: ${window.opener.location.pathname}`;
 	let body = document.getElementsByTagName('body')[0];
 	body.innerHTML = `
 	<div id="app">
-		{{ message }}
-		<button class="button">Button</button>
-		<div id="console"></div>
+		<div id="layout">
+			<div id="main">
+				{{ message }}
+				<button class="button">Button</button>
+			</div>
+			<div id="board">2</div>
+			<div id="console">3</div>
+			<div id="settings">4</div>
+		</div>
 	</div>
 	<style>
+		html {
+			overflow-y: auto;
+		}
 		body {
 			background: linear-gradient(rgb(46, 42, 36), rgb(22, 21, 18) 116px) no-repeat rgb(22, 21, 18);
 			color: rgb(186, 186, 186);
 			font-family: "Noto Sans", sans-serif;
 			font-size: 14px;
+			margin: 0px;
+		}
+		#layout {
+			display: grid;
+			height: 100vh;
+			grid-template-columns: 1fr 1fr;
+			grid-template-rows: 1fr 1fr;
+			grid-gap: 12px;
+			grid-template-areas:
+				"main board"
+				"settings console";
+			padding: 12px;
+		}
+		@media (max-width: 1024px) {
+			#layout {
+				grid-template-columns: 1fr;
+				grid-template-rows: 1fr;
+				grid-template-areas:
+					"main"
+					"settings"
+					"board"
+					"console";
+			}
+		}
+		#main {
+			grid-area: main;
+			border: 1px solid #444;
+		}
+		#board {
+			grid-area: board;
+			border: 1px solid #444;
+		}
+		#settings {
+			grid-area: settings;
+			border: 1px solid #444;
+		}
+		#console {
+			grid-area: console;
+			border: 1px solid #444;
+			overflow-y: scroll;
 		}
 	</style>`;
 
@@ -277,7 +326,7 @@ const main = async () => {
 		log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
 	});
 	doc.addEventListener('keydown', hotkey);
-	findGame();
+	await findGame();
 };
 
 main();
