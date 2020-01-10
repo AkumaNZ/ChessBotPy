@@ -4,7 +4,8 @@ import chess
 import chess.engine
 import chess.svg
 import pyttsx3
-import jsonpickle
+# import jsonpickle
+import json
 import configparser
 import os
 
@@ -28,14 +29,14 @@ print('Initialized TTS')
 class GameObject():
 
     def __init__(self, board, engine, transport):
-        self.board = board
-        self.engine = engine
+        self.board: chess.Board = board
+        self.engine: chess.engine.EngineProtocol = engine
         self.transport = transport
         self.visible = True
         self.missed_moves = False
         self.last_move = ''
         self.side = int(config['GUI']['side'])
-        self.voice = config['GUI']['voiceenabled'].lower() == 'true'
+        self.voice = config['GUI']['use_voice'].lower() == 'true'
 
 
 digits = {
@@ -88,12 +89,24 @@ def parse_speech(move: str):
     return sentence
 
 
+def serialize_message(target, message):
+    return json.dumps({"target": target, "message": message})
+
+
 async def run_engine(uid, ws):
-    game = games[uid]
+    game: GameObject = games[uid]
     if game.board.turn == game.side or game.side == BOTH:
         # print(game.board)
-        result = await game.engine.play(game.board, chess.engine.Limit(depth=8), game=uid, info=chess.engine.INFO_ALL)
-        # Send board + result as SVG back to client here, include few moves with arrows color coded rainbow
+        limit: chess.engine.Limit = chess.engine.Limit()
+        if (config['GUI']['use_depth']):
+            limit.depth = int(config['GUI']['depth'])
+        if (config['GUI']['use_time']):
+            limit.time = int(config['GUI']['time'])
+
+        result: chess.engine.PlayResult = await game.engine.play(game.board, limit, game=uid, info=chess.engine.INFO_ALL)
+        svg = chess.svg.board(board=game.board)
+        # Add arrows here
+        await ws.send(serialize_message("board", svg))
         best_move = game.board.san(result.move)
         if not game.last_move['history']:
             tts = parse_speech(best_move)
@@ -104,15 +117,15 @@ async def run_engine(uid, ws):
         # print("Ponder:", game.board.san(result.ponder))
         print("Best move:", best_move)
         game.missed_moves = False
-        frozen = jsonpickle.encode(result.info)
-        await ws.send(frozen)
+        # frozen = jsonpickle.encode(result.info)
+        # await ws.send(frozen)
 
 
 async def configure_engine(uid):
     engine = games[uid].engine
     if engine is not None:
         if "engine" not in engine_config.sections():
-            base = os.path.basename(config['GUI']['enginepath'])  # FIX ME! Error handling
+            base = os.path.basename(config['GUI']['engine_path'])  # FIX ME! Error handling
             engine_name = os.path.splitext(base)[0]
             engine_config.read(engine_name + ".ini")
         if "engine" in engine_config.sections():
@@ -132,14 +145,14 @@ async def handle_message(message, uid, ws):
     # Initialize board and engine for new UIDs
     if uid not in games:
         board = chess.Board()
-        transport, engine = await chess.engine.popen_uci(config['GUI']['enginepath'])
+        transport, engine = await chess.engine.popen_uci(config['GUI']['engine_path'])
         games[uid] = GameObject(board, engine, transport)
         await configure_engine(uid)
         # print(engine.options._store)
     # Alias for the game
     game = games[uid]
     # Parse json message to python
-    data = jsonpickle.decode(message)
+    data = json.loads(message)
 
     if data['type'] == 'visibility':
         game.visible = data['visible']
@@ -148,7 +161,7 @@ async def handle_message(message, uid, ws):
         if game.visible:
             if game.engine is None:
                 print('Launching engine.')
-                game.transport, game.engine = await chess.engine.popen_uci(config['GUI']['EnginePath'])
+                game.transport, game.engine = await chess.engine.popen_uci(config['GUI']['engine_path'])
                 await configure_engine(uid)
         else:
             print('Closing engine.')
@@ -187,7 +200,6 @@ async def handle_message(message, uid, ws):
 async def new_move(game, data, uid, ws):
     if 'move' in data:
         game.board.push_san(data['move'])
-        # svg = chess.svg.board(board=game.board)
         game.last_move = data
         if game.visible:
             await run_engine(uid, ws)

@@ -218,15 +218,6 @@ const loadCSS = url => {
 	});
 };
 
-const loadInlineScript = async code => {
-	const scriptElement = document.createElement('script');
-	const textNode = document.createTextNode(code);
-	scriptElement.appendChild(textNode);
-	const head = document.querySelector('head');
-	head.appendChild(scriptElement);
-	await sleep(1);
-};
-
 const main = async () => {
 	if (window.location.href != 'https://lichess.org/.bot') {
 		await Promise.race([waitForElement('.rmoves'), waitForElement('.tview2')]);
@@ -258,10 +249,7 @@ const main = async () => {
 					Button
 				</button>
 			</div>
-			<div id="board" class="bg-gray-800 rounded-lg p-3">
-				<h1 class="font-display text-5xl">
-					Board
-				</h1>
+			<div id="board" class="bg-gray-800 rounded-lg p-3" v-html="board">
 			</div>
 			<div id="console" class="font-mono bg-gray-800 rounded-lg p-3">
 				<h1 class="font-display text-5xl">
@@ -280,8 +268,8 @@ const main = async () => {
 			display: grid;
 			height: 100vh;
 			padding: 12px;
-			grid-template-columns: 1fr 1fr;
-			grid-template-rows: 1fr 1fr;
+			grid-template-columns: 50% 50%;
+			grid-template-rows: 50% 50%;
 			grid-gap: 12px;
 			grid-template-areas:
 				"main board"
@@ -332,16 +320,23 @@ const main = async () => {
 	}
 	log('Connection estabished.');
 	ws.onmessage = function(event) {
-		console.log(JSON.parse(event.data));
+		data = JSON.parse(event.data);
+		switch (data.target) {
+			case 'board':
+				app.$data.board = data.message;
+				break;
+			default:
+				console.log(data.message);
+		}
 	};
 
-	await loadInlineScript(`
-		var app = new Vue({
-			el: '#app',
-			data: {
-				message: 'Hello Vue!'
-			}
-		})`);
+	var app = new Vue({
+		el: '#app',
+		data: {
+			message: 'Hello Vue!',
+			board: '',
+		},
+	});
 
 	doc.addEventListener('visibilitychange', () => {
 		ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden }));
