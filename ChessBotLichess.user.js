@@ -238,42 +238,56 @@ const main = async () => {
 		return;
 	}
 	window.document.title = `Client: ${window.opener.location.pathname}`;
+
+	await loadCSS('https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css');
+	await loadCSS(
+		'https://fonts.googleapis.com/css?family=Nunito:300,300i,400,400i,600,600i,700,700i|Open+Sans:300,300i,400,400i,600,600i,700,700i&display=swap'
+	);
+	await loadScript('https://cdn.jsdelivr.net/npm/vue/dist/vue.js');
+
 	let body = document.getElementsByTagName('body')[0];
+	body.classList.add('bg-gray-900');
 	body.innerHTML = `
-	<div id="app">
+	<div id="app" class="font-sans text-gray-100">
 		<div id="layout">
-			<div id="main">
-				{{ message }}
-				<button class="button">Button</button>
+			<div id="main" class="bg-gray-800 rounded-lg p-3">
+				<h1 class="font-display text-5xl">
+					Main
+				</h1>
+				<button class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
+					Button
+				</button>
 			</div>
-			<div id="board">2</div>
-			<div id="console">3</div>
-			<div id="settings">4</div>
+			<div id="board" class="bg-gray-800 rounded-lg p-3">
+				<h1 class="font-display text-5xl">
+					Board
+				</h1>
+			</div>
+			<div id="console" class="font-mono bg-gray-800 rounded-lg p-3">
+				<h1 class="font-display text-5xl">
+					Console
+				</h1>
+			</div>
+			<div id="settings" class="bg-gray-800 rounded-lg p-3">
+				<h1 class="font-display text-5xl">
+					Settings
+				</h1>
+			</div>
 		</div>
 	</div>
 	<style>
-		html {
-			overflow-y: auto;
-		}
-		body {
-			background: linear-gradient(rgb(46, 42, 36), rgb(22, 21, 18) 116px) no-repeat rgb(22, 21, 18);
-			color: rgb(186, 186, 186);
-			font-family: "Noto Sans", sans-serif;
-			font-size: 14px;
-			margin: 0px;
-		}
 		#layout {
 			display: grid;
 			height: 100vh;
+			padding: 12px;
 			grid-template-columns: 1fr 1fr;
 			grid-template-rows: 1fr 1fr;
 			grid-gap: 12px;
 			grid-template-areas:
 				"main board"
 				"settings console";
-			padding: 12px;
 		}
-		@media (max-width: 1024px) {
+		@media (max-width: 1240px) {
 			#layout {
 				grid-template-columns: 1fr;
 				grid-template-rows: 1fr;
@@ -286,32 +300,40 @@ const main = async () => {
 		}
 		#main {
 			grid-area: main;
-			border: 1px solid #444;
 		}
 		#board {
 			grid-area: board;
-			border: 1px solid #444;
 		}
 		#settings {
 			grid-area: settings;
-			border: 1px solid #444;
 		}
 		#console {
 			grid-area: console;
-			border: 1px solid #444;
 			overflow-y: scroll;
+		}
+		.font-sans {
+			font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
+		}
+		.font-serif {
+			font-family: Georgia, Cambria, "Times New Roman", Times, serif !important;
+		}
+		.font-mono {
+			font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+		}
+		.font-display {
+			font-family: 'Nunito', 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
 		}
 	</style>`;
 
-	ws = await connect(`ws://127.0.0.1:5678/${uid}`);
+	try {
+		ws = await connect(`ws://127.0.0.1:5678/${uid}`);
+	} catch {
+		log('Failed to connect, make sure the server is running.');
+	}
 	log('Connection estabished.');
 	ws.onmessage = function(event) {
 		console.log(JSON.parse(event.data));
 	};
-
-	await loadCSS('https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css');
-
-	await loadScript('https://cdn.jsdelivr.net/npm/vue/dist/vue.js');
 
 	await loadInlineScript(`
 		var app = new Vue({
