@@ -130,3 +130,6 @@ dmypy.json
 
 # Chess engine stuff
 /engine
+
+# Fucking NPM
+/node_modules

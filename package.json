@@ -1,0 +1,23 @@
+{
+	"name": "chessbotpy",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"build:css": "postcss tailwind.css -o dist/tailwind.min.css",
+		"serve": "http-server ./",
+		"server": "http-server ./",
+		"watch": "watch \"npm run build:css\" ./js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@fullhuman/postcss-purgecss": "^1.3.0",
+		"autoprefixer": "^9.7.3",
+		"cssnano": "^4.1.10",
+		"http-server": "^0.12.1",
+		"tailwindcss": "^1.1.4",
+		"watch": "^1.0.2"
+	}
+}

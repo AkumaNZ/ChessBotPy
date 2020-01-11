@@ -93,6 +93,10 @@ def serialize_message(target, message):
     return json.dumps({"target": target, "message": message})
 
 
+def create_arrows(moves):
+    pass
+
+
 async def run_engine(uid, ws):
     game: GameObject = games[uid]
     if game.board.turn == game.side or game.side == BOTH:
@@ -103,19 +107,26 @@ async def run_engine(uid, ws):
         if (config['GUI']['use_time']):
             limit.time = int(config['GUI']['time'])
 
-        result: chess.engine.PlayResult = await game.engine.play(game.board, limit, game=uid, info=chess.engine.INFO_ALL)
-        svg = chess.svg.board(board=game.board)
+        multipv = int(engine_config["engine"]['multipv'])
+        result: chess.engine.PlayResult = await game.engine.analyse(
+            board=game.board,
+            limit=limit,
+            multipv=multipv,
+            game=uid,
+            info=chess.engine.INFO_ALL,
+        )
+        svg = chess.svg.board(board=game.board, coordinates=False)
         # Add arrows here
         await ws.send(serialize_message("board", svg))
-        best_move = game.board.san(result.move)
-        if not game.last_move['history']:
-            tts = parse_speech(best_move)
-            # print(tts)
-            speech.stop()
-            speech.say(tts)
-            speech.iterate()
-        # print("Ponder:", game.board.san(result.ponder))
-        print("Best move:", best_move)
+        # best_move = game.board.san(result.move)
+        # if not game.last_move['history']:
+        #     tts = parse_speech(best_move)
+        #     # print(tts)
+        #     speech.stop()
+        #     speech.say(tts)
+        #     speech.iterate()
+        # # print("Ponder:", game.board.san(result.ponder))
+        # print("Best move:", best_move)
         game.missed_moves = False
         # frozen = jsonpickle.encode(result.info)
         # await ws.send(frozen)

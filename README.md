@@ -12,50 +12,6 @@ The basic operation of this bot is very simple:
 
 To be able connect to a websocket, a site must not have restricted content security policy (CSP), specifically connect-src. Fortunately this can be bypassed by opening a new window, which does not have CSP, and communicating through `window` objects in javascript.
 
-## Planned features
-
-**Site support**
-
--   Support analysis mode properly on lichess
-    -   Including variations
--   Support for Chess.com
--   Support for Chess24
-
-**Interface**
-
--   Read out ponder
--   Read out a move ahead if there is a forced line
--   GUI
-    -   Priciple variation lines
-        -   Multiple principle variations if they they are within x centipawns of each other
-            -   i.e. if no single PV line is clearly better
-    -   Centipawn (score)
-    -   If currently enabled/searching
-    -   Which side you're playing as
-    -   Found game / url
-    -   FEN
-    -   Settings
-    -   Console
-    -   SVG representation of the board
-        -   draw PV lines
-            -   Each line is a different color
-            -   each move ahead shifts/fades/transparency the color a bit
-            -   Settings for SVG stuff
-
-**Configurations**
-
--   Settings files
-    -   Different files for engine and GUI
-    -   Generate engine.ini automatically
-        -   Base engine setting file off of selected engine
--   Depth / Time
-    -   Advanced settings
-        -   Stage of game, etc.
--   Output options
-    -   Text
-    -   Voice
-    -   SVG
-
 ## Known issues:
 
 -   Lichess parser does not handle interrupts in analysis mode.
@@ -64,15 +20,40 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Todo
 
--   Create a CSS Grid, 2x2 layout
-    -   Main info and buttons
-        -   Show PVs, CP, FEN
-        -   Start, play as
-        -   Open engine settings
-        -   Depth / Time setting
-    -   SVG Board
-    -   Console
-    -   Open space for stuff to open to
-        -   Engine settings, etc
--   Send in necessary information from server
--   Create a on message parser, that will feed data to vue
+-   Get the side you're playing as automatically
+-   Handle managed engine settings
+    -   Limit
+    -   MultiPV
+-   Handle saved settings (defaults) and game specific settings (temporary)
+-   GUI settings
+    -   Which panels to show
+        -   SVG
+        -   Console
+        -   Settings
+        -   Main
+        -   Create a side panel?
+    -   Order of panels
+        -   Desktop
+        -   Mobile
+-   Create option for playing as Black/White
+-   Create option for RunEngineFor Me, Opponent, Both, None
+-   Parse polybooks in the correct order
+    -   Send all the available moves to client
+    -   Combine with run engine analysis, to first use polybook moves
+-   Main info and buttons
+    -   Show PVs, CP, FEN
+    -   Rlay as
+    -   Run engine for
+    -   Open engine settings
+    -   Depth / Time setting
+-   SVG Board
+    -   Draw arrows in SVG
+    -   Map color of arrows to PV table somehow?
+-   Create table of PVs
+-   Console
+    -   Auto scroll if at the bottom
+    -   Log settings
+        -   What to log
+-   Implement auto generated engine settings
+    -   Create custom checkbox, radio, slider, etc
+    -   Save settings logic

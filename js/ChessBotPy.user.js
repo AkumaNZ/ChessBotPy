@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name        ChessBotLichess
+// @name        ChessBotPy
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
-// @version     1.6
+// @version     1.7
 // @author      FallDownTheSystem
-// @description Lichess Spy
+// @description ChessBotPy Client
 // ==/UserScript==
 
 // A new window is opened to allow a websocket connection, since the main page has a restricted CSP
@@ -14,7 +14,7 @@ let doc = window.document;
 if (window.opener != null) {
 	doc = window.opener.document;
 }
-
+// asd
 // Global state
 let index = 0;
 let white = true;
@@ -22,6 +22,7 @@ let move = '';
 let activeTarget = '';
 let uid = uuidv4();
 let ws = null;
+let app = null;
 
 function uuidv4() {
 	return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
@@ -47,8 +48,7 @@ function hotkey(e) {
 
 function log(...args) {
 	console.log(...args);
-	body = document.querySelector('#console');
-	body.innerHTML += `<p>${args.join(' ')}</p>`;
+	app.messages.push(args.join(' '));
 }
 
 var observer = new MutationObserver(mutations => {
@@ -230,7 +230,7 @@ const main = async () => {
 	}
 	window.document.title = `Client: ${window.opener.location.pathname}`;
 
-	await loadCSS('https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css');
+	await loadCSS('http://127.0.0.1:8080/dist/tailwind.css');
 	await loadCSS(
 		'https://fonts.googleapis.com/css?family=Nunito:300,300i,400,400i,600,600i,700,700i|Open+Sans:300,300i,400,400i,600,600i,700,700i&display=swap'
 	);
@@ -238,80 +238,192 @@ const main = async () => {
 
 	let body = document.getElementsByTagName('body')[0];
 	body.classList.add('bg-gray-900');
+	// To make sure PurgeCSS generates html classes
+	// <html></html>
 	body.innerHTML = `
 	<div id="app" class="font-sans text-gray-100">
 		<div id="layout">
-			<div id="main" class="bg-gray-800 rounded-lg p-3">
-				<h1 class="font-display text-5xl">
-					Main
-				</h1>
+			<div id="main" class="bg-gray-800 p-3">
+
+				<div class="inline-flex flex-col mr-10">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
+					<label class="radio inline-flex cursor-pointer relative mb-2">
+						<input type="radio" checked name="side" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<span class="ml-2">White</span>
+					</label>
+					<label class="radio inline-flex cursor-pointer relative mb-2">
+						<input type="radio" name="side" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<span class="ml-2">Black</span>
+					</label>
+				</div>
+
+				<div class="inline-flex flex-col mr-10">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Run engine for</span>
+					<label class="radio inline-flex cursor-pointer relative mb-2">
+						<input type="radio" name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<span class="ml-2">None</span>
+					</label>
+					<label class="radio inline-flex cursor-pointer relative mb-2">
+						<input type="radio" name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<span class="ml-2">Me</span>
+					</label>
+					<label class="radio inline-flex cursor-pointer relative mb-2">
+						<input type="radio" name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<span class="ml-2">Opponent</span>
+					</label>
+					<label class="radio inline-flex cursor-pointer relative mb-2">
+						<input type="radio" checked name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<span class="ml-2">Both</span>
+					</label>
+				</div>
+
+				<div class="inline-flex flex-col mr-10">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
+					<label class="checkbox inline-flex cursor-pointer relative mb-2">
+						<input type="checkbox" checked name="limit" class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none">
+						<span class="ml-2">Depth</span>
+					</label>
+					<label class="checkbox inline-flex cursor-pointer relative mb-2">
+						<input type="checkbox" name="limit" class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none">
+						<span class="ml-2">Time</span>
+					</label>
+				</div>
+
+				<div class="inline-flex flex-col mr-10">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine</span>
+					<label for="engine-path">
+						Path
+					</label>
+					<input class="appearance-none bg-gray-900 text-gray-400 rounded py-3 px-4 mb-3 focus:outline-none border border-none hover:border-solid border-indigo-500" 
+						id="engine-path" 
+						type="text"
+					>
+				</div>
+
+			</div>
+			<div id="board" class="bg-gray-800 p-3" v-html="board">
+			</div>
+			<div id="console" class="font-mono bg-gray-800 p-3">
+				<pre v-for='message in messages'>{{message}}</pre>
+			</div>
+			<div id="settings" class="bg-gray-800 p-3">
 				<button class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
-					Button
-				</button>
-			</div>
-			<div id="board" class="bg-gray-800 rounded-lg p-3" v-html="board">
-			</div>
-			<div id="console" class="font-mono bg-gray-800 rounded-lg p-3">
-				<h1 class="font-display text-5xl">
-					Console
-				</h1>
-			</div>
-			<div id="settings" class="bg-gray-800 rounded-lg p-3">
-				<h1 class="font-display text-5xl">
 					Settings
-				</h1>
+				</button>
+				<label class="checkbox inline-flex cursor-pointer relative">
+					<input type="checkbox" class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none">
+					<span class="ml-2">Check Me</span>
+				</label>
+			</label>
 			</div>
 		</div>
 	</div>
 	<style>
 		#layout {
 			display: grid;
+			grid-gap: 2px;
 			height: 100vh;
-			padding: 12px;
-			grid-template-columns: 50% 50%;
-			grid-template-rows: 50% 50%;
-			grid-gap: 12px;
+			padding: 2px;
+			grid-template-columns: 12fr;
+			grid-template-rows: 50vh 50vh 50vh 50vh;
 			grid-template-areas:
-				"main board"
-				"settings console";
+				"main"
+				"engine"
+				"board"
+				"console";
 		}
-		@media (max-width: 1240px) {
+
+		@media (min-width: 1024px) {
 			#layout {
-				grid-template-columns: 1fr;
-				grid-template-rows: 1fr;
+				grid-template-columns: 6fr 6fr;
+				grid-template-rows: 1fr 1fr;
 				grid-template-areas:
-					"main"
-					"settings"
-					"board"
-					"console";
+					"main board"
+					"engine console";
 			}
 		}
+
 		#main {
 			grid-area: main;
 		}
+
 		#board {
 			grid-area: board;
 		}
-		#settings {
-			grid-area: settings;
+
+		#board > svg {
+			height: 100%;
 		}
+
+		#settings {
+			grid-area: engine;
+		}
+
 		#console {
 			grid-area: console;
 			overflow-y: scroll;
 		}
+
 		.font-sans {
 			font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
 		}
+
 		.font-serif {
 			font-family: Georgia, Cambria, "Times New Roman", Times, serif !important;
 		}
+
 		.font-mono {
 			font-family: Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
 		}
+
 		.font-display {
 			font-family: 'Nunito', 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !important;
 		}
-	</style>`;
+		
+		.checkbox > input:checked {
+			background-color: #667eea;
+		}
+		
+		.checkbox > input:checked + span::before {
+			content: '✓';
+			color: white;
+			font-weight: bolder;
+			position: absolute;
+			left: 0.4rem;
+		}
+
+		.radio > input:checked {
+			background-color: #667eea;
+		}
+		
+		.radio > input:checked + span::before {
+			content: '';
+			display: block;
+			background: white;
+			width: 0.6rem;
+			height: 0.6rem;
+			border-radius: 9999px;
+			position: absolute;
+			left: 0.45rem;
+			top: 0.45rem;
+		}
+		// Generated tailwindcss goes here
+
+		</style>`;
+
+	app = new Vue({
+		el: '#app',
+		data: {
+			board: '',
+			messages: [],
+			enginePath: '',
+		},
+		methods: {
+			changeEngine: event => {
+				console.log(event);
+			},
+		},
+	});
 
 	try {
 		ws = await connect(`ws://127.0.0.1:5678/${uid}`);
@@ -323,20 +435,12 @@ const main = async () => {
 		data = JSON.parse(event.data);
 		switch (data.target) {
 			case 'board':
-				app.$data.board = data.message;
+				app.board = data.message;
 				break;
 			default:
 				console.log(data.message);
 		}
 	};
-
-	var app = new Vue({
-		el: '#app',
-		data: {
-			message: 'Hello Vue!',
-			board: '',
-		},
-	});
 
 	doc.addEventListener('visibilitychange', () => {
 		ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden }));
