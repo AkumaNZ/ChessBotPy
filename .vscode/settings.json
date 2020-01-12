@@ -11,5 +11,6 @@
 	"python.testing.nosetestsEnabled": false,
 	"python.testing.unittestEnabled": false,
 	"editor.renderWhitespace": "boundary",
-	"python.testing.promptToConfigure": false
+	"python.testing.promptToConfigure": false,
+	"python.formatting.provider": "yapf"
 }

@@ -32,21 +32,21 @@ function uuidv4() {
 
 function hotkey(e) {
 	if (e.altKey && e.code === 'KeyW') {
-		log('Playing as white');
-		ws.send(JSON.stringify({ type: 'hotkey', playing: 1 }));
+		logToConsole('Playing as white');
+		ws.send(JSON.stringify({ type: 'hotkey', data: 1 }));
 	} else if (e.altKey && e.code === 'KeyQ') {
-		log('Playing as black');
-		ws.send(JSON.stringify({ type: 'hotkey', playing: 0 }));
+		logToConsole('Playing as black');
+		ws.send(JSON.stringify({ type: 'hotkey', data: 0 }));
 	} else if (e.altKey && e.code === 'KeyA') {
-		log('Playing as Both');
-		ws.send(JSON.stringify({ type: 'hotkey', playing: 2 }));
+		logToConsole('Playing as Both');
+		ws.send(JSON.stringify({ type: 'hotkey', data: 2 }));
 	} else if (e.altKey && e.code === 'KeyS') {
-		log('Stopping');
-		ws.send(JSON.stringify({ type: 'hotkey', playing: 3 }));
+		logToConsole('Stopping');
+		ws.send(JSON.stringify({ type: 'hotkey', data: 3 }));
 	}
 }
 
-function log(...args) {
+function logToConsole(...args) {
 	console.log(...args);
 	app.messages.push(args.join(' '));
 }
@@ -58,7 +58,7 @@ var observer = new MutationObserver(mutations => {
 			x => (x.target.nodeName === 'MOVE' || x.target.nodeName === 'M2') && x.target.classList.contains('active')
 		);
 		if (activeChanges.length == 0 && activeTarget != 'starting-position') {
-			log(`Changed active target to: Starting position`);
+			logToConsole(`Changed active target to: Starting position`);
 			activeTarget = `starting-position`;
 		}
 	}
@@ -84,8 +84,8 @@ function parseMove(node, history) {
 	if (node.nodeName === 'DIV' && node.classList.contains('moves')) {
 		index = parseInt(node.firstChild.firstChild.textContent);
 		move = node.lastChild.firstChild.textContent;
-		newMove = { type: 'move', index, white, move, history };
-		log(`${index}.${white ? '  ' : '..'} ${move}`);
+		newMove = { type: 'move', data: { index, white, move, history } };
+		logToConsole(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
 		return newMove;
 	}
@@ -96,15 +96,15 @@ function parseMove(node, history) {
 	// New move
 	else if (node.nodeName === 'MOVE' || node.nodeName === 'M2') {
 		move = node.firstChild.textContent;
-		newMove = { type: 'move', index, white, move, history };
-		log(`${index}.${white ? '  ' : '..'} ${move}`);
+		newMove = { type: 'move', data: { index, white, move, history } };
+		logToConsole(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
 		return newMove;
 	}
 	// Result (game ended)
 	else if (node.classList.contains('result-wrap')) {
-		log('Game ended!');
-		return { type: 'result', status: 'ended' };
+		logToConsole('Game ended!');
+		return { type: 'result', data: 'ended' };
 	}
 }
 
@@ -121,8 +121,8 @@ function parseActiveStateChange(node) {
 		}
 		if (`${index}-${white}-${move}` != activeTarget) {
 			activeTarget = `${index}-${white}-${move}`;
-			log(`Changed active target to: ${index} ${white ? 'white' : 'black'} ${move}`);
-			return { type: 'history', index, white, move };
+			logToConsole(`Changed active target to: ${index} ${white ? 'white' : 'black'} ${move}`);
+			return { type: 'history', data: { index, white, move } };
 		}
 	}
 }
@@ -136,7 +136,7 @@ const findGame = async () => {
 	}
 
 	if (nodes != null) {
-		log('Parsing initial moves');
+		logToConsole('Parsing initial moves');
 		initialMoves = [];
 		// Get last item and don't mark it as history
 		for (let node of nodes.children) {
@@ -148,10 +148,10 @@ const findGame = async () => {
 		if (initialMoves.length > 0) {
 			// Set last move as not history
 			initialMoves[initialMoves.length - 1].history = false;
-			ws.send(JSON.stringify({ type: 'initial', moves: initialMoves }));
+			ws.send(JSON.stringify({ type: 'initial', data: initialMoves }));
 		}
 	} else {
-		log('No intial moves to parse...');
+		logToConsole('No intial moves to parse...');
 	}
 
 	if (doc.querySelector('.rmoves') != null) {
@@ -160,16 +160,16 @@ const findGame = async () => {
 			childList: true,
 			subtree: true,
 		});
-		log('Attached mutation observer on ".rmoves"');
+		logToConsole('Attached mutation observer on ".rmoves"');
 	} else if (doc.querySelector('.tview2') != null) {
 		observer.observe(doc.querySelector('.tview2'), {
 			attributes: true,
 			childList: true,
 			subtree: true,
 		});
-		log('Attached mutation observer on ".tview2"');
+		logToConsole('Attached mutation observer on ".tview2"');
 	} else {
-		log('No target found for mutation observer to attach to');
+		logToConsole('No target found for mutation observer to attach to');
 	}
 };
 
@@ -248,11 +248,17 @@ const main = async () => {
 				<div class="inline-flex flex-col mr-10">
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input type="radio" checked name="side" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<input 
+							type="radio" name="side" value="1" v-model="playingAs" 
+							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">White</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input type="radio" name="side" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<input 
+							type="radio" name="side" value="0" v-model="playingAs" 
+							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">Black</span>
 					</label>
 				</div>
@@ -260,19 +266,31 @@ const main = async () => {
 				<div class="inline-flex flex-col mr-10">
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Run engine for</span>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input type="radio" name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<input 
+							type="radio" name="run-engine" value="3" v-model="runEngineFor"
+							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">None</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input type="radio" name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<input
+							type="radio" name="run-engine" value="0" v-model="runEngineFor"
+							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">Me</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input type="radio" name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<input
+							type="radio" name="run-engine" value="1" v-model="runEngineFor"
+							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">Opponent</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input type="radio" checked name="run-engine" class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none">
+						<input
+							type="radio" name="run-engine" value="2" v-model="runEngineFor"
+							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">Both</span>
 					</label>
 				</div>
@@ -280,11 +298,17 @@ const main = async () => {
 				<div class="inline-flex flex-col mr-10">
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
 					<label class="checkbox inline-flex cursor-pointer relative mb-2">
-						<input type="checkbox" checked name="limit" class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none">
+						<input
+							type="checkbox" v-model="useDepth"
+							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">Depth</span>
 					</label>
 					<label class="checkbox inline-flex cursor-pointer relative mb-2">
-						<input type="checkbox" name="limit" class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none">
+						<input
+							type="checkbox" v-model="useTime"
+							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+						>
 						<span class="ml-2">Time</span>
 					</label>
 				</div>
@@ -294,18 +318,21 @@ const main = async () => {
 					<label for="engine-path">
 						Path
 					</label>
-					<input class="appearance-none bg-gray-900 text-gray-400 rounded py-3 px-4 mb-3 focus:outline-none border border-none hover:border-solid border-indigo-500" 
-						id="engine-path" 
-						type="text"
+					<input
+						type="text" v-model="enginePath" @change="handleEnginePath"
+						class="appearance-none bg-gray-900 text-gray-400 rounded py-3 px-4 mb-3 focus:outline-none border border-none focus:border-solid border-indigo-500" 
 					>
 				</div>
 
 			</div>
+
 			<div id="board" class="bg-gray-800 p-3" v-html="board">
 			</div>
+
 			<div id="console" class="font-mono bg-gray-800 p-3">
 				<pre v-for='message in messages'>{{message}}</pre>
 			</div>
+
 			<div id="settings" class="bg-gray-800 p-3">
 				<button class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow">
 					Settings
@@ -318,6 +345,7 @@ const main = async () => {
 			</div>
 		</div>
 	</div>
+
 	<style>
 		#layout {
 			display: grid;
@@ -417,10 +445,20 @@ const main = async () => {
 			board: '',
 			messages: [],
 			enginePath: '',
+			playingAs: 0,
+			runEngineFor: 0,
+			useDepth: true,
+			depth: 8,
+			useTime: false,
+			time: 0,
 		},
 		methods: {
-			changeEngine: event => {
-				console.log(event);
+			handleEnginePath(event) {
+				let path = event.target.value;
+				path = path.replace(/\\/g, '/');
+				this.enginePath = path;
+				logToConsole('Changed engine path to:', path);
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'engine_path', value: path } }));
 			},
 		},
 	});
@@ -428,23 +466,50 @@ const main = async () => {
 	try {
 		ws = await connect(`ws://127.0.0.1:5678/${uid}`);
 	} catch {
-		log('Failed to connect, make sure the server is running.');
+		logToConsole('Failed to connect. Make sure the server is running and refresh the page.');
+		return;
 	}
-	log('Connection estabished.');
+	logToConsole('Connection estabished.');
 	ws.onmessage = function(event) {
 		data = JSON.parse(event.data);
 		switch (data.target) {
 			case 'board':
 				app.board = data.message;
 				break;
+			case 'error':
+				logToConsole(data.message);
+				break;
+			case 'setting':
+				const { key, value } = data.message;
+				if (Array.isArray(app.$data[key])) {
+					app.$data[key].push(value);
+				} else {
+					switch (typeof app.$data[key]) {
+						case 'string':
+						case 'object':
+							app.$data[key] = value;
+							break;
+						case 'number':
+							app.$data[key] = parseInt(value);
+							break;
+						case 'boolean':
+							app.$data[key] = value == 'true';
+							break;
+						default:
+							logToConsole('Unknown data type', key, value);
+							break;
+					}
+				}
+				break;
 			default:
-				console.log(data.message);
+				logToConsole('Received unknown message type, see console for details');
+				console.log(data);
 		}
 	};
 
 	doc.addEventListener('visibilitychange', () => {
-		ws.send(JSON.stringify({ type: 'visibility', visible: !doc.hidden }));
-		log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
+		ws.send(JSON.stringify({ type: 'visibility', data: !doc.hidden }));
+		logToConsole(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
 	});
 	doc.addEventListener('keydown', hotkey);
 	await findGame();

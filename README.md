@@ -20,36 +20,24 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Todo
 
--   Get the side you're playing as automatically
+-   Handle option for playing as Black/White
+    -   Get the side you're playing as automatically
+-   Handle option for RunEngineFor Me, Opponent, Both, None
 -   Handle managed engine settings
     -   Limit
     -   MultiPV
 -   Handle saved settings (defaults) and game specific settings (temporary)
--   GUI settings
-    -   Which panels to show
-        -   SVG
-        -   Console
-        -   Settings
-        -   Main
-        -   Create a side panel?
-    -   Order of panels
-        -   Desktop
-        -   Mobile
--   Create option for playing as Black/White
--   Create option for RunEngineFor Me, Opponent, Both, None
 -   Parse polybooks in the correct order
     -   Send all the available moves to client
     -   Combine with run engine analysis, to first use polybook moves
+-   Send engine data to client
+-   Create panel for PVs
+    -   CP
 -   Main info and buttons
-    -   Show PVs, CP, FEN
-    -   Rlay as
-    -   Run engine for
-    -   Open engine settings
-    -   Depth / Time setting
+    -   FEN
 -   SVG Board
     -   Draw arrows in SVG
-    -   Map color of arrows to PV table somehow?
--   Create table of PVs
+    -   Map color of arrows to PV table somehow
 -   Console
     -   Auto scroll if at the bottom
     -   Log settings
