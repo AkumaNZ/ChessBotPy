@@ -19,15 +19,11 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Todo
 
--   Handle managed engine settings
-    -   Limit
-    -   MultiPV
--   Handle applying default settings in a better way
-    -   Changing setting never saves to file, but only when save button is clicked?
 -   Parse polybooks in the correct order
     -   Send all the available moves to client
     -   Combine with run engine analysis, to first use polybook moves
 -   Send engine data to client
+    -   Log best moves, etc?
 -   Create panel for PVs
     -   Include CP
 -   Main info and buttons
@@ -38,10 +34,12 @@ To be able connect to a websocket, a site must not have restricted content secur
     -   Draw arrows in SVG
     -   Map color of arrows to PV table somehow
 -   Console
-    -   Auto scroll if at the bottom
-    -   Log settings
-        -   What to log
+    -   Log settings (What to log)
     -   Text should wrap
 -   Implement auto generated engine settings
     -   Create custom checkbox, radio, slider, etc
     -   Save settings logic
+-   Handle managed engine settings
+    -   MultiPV
+-   Handle applying default settings in a better way
+    -   Changing setting never saves to file, but only when save button is clicked?

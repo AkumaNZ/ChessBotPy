@@ -127,29 +127,27 @@ async def run_engine(uid, ws):
         if (config['gui']['use_time']):
             limit.time = int(config['gui']['time'])
 
-        # multipv = int(engine_config["engine"]['multipv'])
-        # result: chess.engine.PlayResult = await game.engine.analyse(
-        #     board=game.board,
-        #     limit=limit,
-        #     multipv=multipv,
-        #     game=uid,
-        #     info=chess.engine.INFO_ALL,
-        # )
+        multipv = int(engine_config["engine"]['multipv'])
+        result: chess.engine.PlayResult = await game.engine.play(
+            board=game.board,
+            limit=limit,
+            # multipv=multipv,
+            game=uid,
+            info=chess.engine.INFO_ALL,
+        )
         svg = chess.svg.board(board=game.board, coordinates=False)
         # Add arrows here
         await ws.send(serialize_message("board", svg))
-        # best_move = game.board.san(result.move)
-        # if not game.last_move['history']:
-        #     tts = parse_speech(best_move)
-        #     # print(tts)
-        #     speech.stop()
-        #     speech.say(tts)
-        #     speech.iterate()
-        # # print("Ponder:", game.board.san(result.ponder))
-        # print("Best move:", best_move)
+        best_move = game.board.san(result.move)
+        if not game.last_move['history']:
+            tts = parse_speech(best_move)
+            # print(tts)
+            speech.stop()
+            speech.say(tts)
+            speech.iterate()
+        # print("Ponder:", game.board.san(result.ponder))
+        print("Best move:", best_move)
         game.missed_moves = False
-        # frozen = jsonpickle.encode(result.info)
-        # await ws.send(frozen)
 
 
 async def configure_engine(uid):
@@ -179,7 +177,7 @@ async def update_settings(data, uid, ws):
     if (key in config['defaults']):
         # config['defaults'][key] = value # Do not save defaults to file
         if key == 'side':
-            game.side = value
+            game.side = int(value)
             print("Playing as", value)
         elif key == 'run':
             game.run = value

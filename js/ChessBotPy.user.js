@@ -32,27 +32,33 @@ function uuidv4() {
 
 function hotkey(e) {
 	if (e.altKey && e.code === 'KeyW') {
-		logToConsole('Playing as white');
+		log('Playing as white');
 		app.playingAs = 1;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 1 } }));
 	} else if (e.altKey && e.code === 'KeyQ') {
-		logToConsole('Playing as black');
+		log('Playing as black');
 		app.playingAs = 0;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
 	} else if (e.altKey && e.code === 'KeyA') {
-		logToConsole('Playing as Both');
+		log('Playing as Both');
 		app.runEngineFor = 2;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value: 2 } }));
 	} else if (e.altKey && e.code === 'KeyS') {
-		logToConsole('Stopping');
+		log('Stopping');
 		app.runEngineFor = 3;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value: 3 } }));
 	}
 }
 
-function logToConsole(...args) {
+function log(...args) {
 	console.log(...args);
 	app.messages.push(args.join(' '));
+	if (app.consoleBottomedOut) {
+		setTimeout(() => {
+			var consoleElement = document.getElementById('console');
+			consoleElement.scrollTop = consoleElement.scrollHeight;
+		}, 1);
+	}
 }
 
 var observer = new MutationObserver(mutations => {
@@ -62,7 +68,7 @@ var observer = new MutationObserver(mutations => {
 			x => (x.target.nodeName === 'MOVE' || x.target.nodeName === 'M2') && x.target.classList.contains('active')
 		);
 		if (activeChanges.length == 0 && activeTarget != 'starting-position') {
-			logToConsole(`Changed active target to: Starting position`);
+			log(`Changed active target to: Starting position`);
 			activeTarget = `starting-position`;
 		}
 	}
@@ -89,7 +95,7 @@ function parseMove(node, history) {
 		index = parseInt(node.firstChild.firstChild.textContent);
 		move = node.lastChild.firstChild.textContent;
 		newMove = { type: 'move', data: { index, white, move, history } };
-		logToConsole(`${index}.${white ? '  ' : '..'} ${move}`);
+		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
 		return newMove;
 	}
@@ -101,13 +107,13 @@ function parseMove(node, history) {
 	else if (node.nodeName === 'MOVE' || node.nodeName === 'M2') {
 		move = node.firstChild.textContent;
 		newMove = { type: 'move', data: { index, white, move, history } };
-		logToConsole(`${index}.${white ? '  ' : '..'} ${move}`);
+		log(`${index}.${white ? '  ' : '..'} ${move}`);
 		white = !white;
 		return newMove;
 	}
 	// Result (game ended)
 	else if (node.classList.contains('result-wrap')) {
-		logToConsole('Game ended!');
+		log('Game ended!');
 		return { type: 'result', data: 'ended' };
 	}
 }
@@ -125,7 +131,7 @@ function parseActiveStateChange(node) {
 		}
 		if (`${index}-${white}-${move}` != activeTarget) {
 			activeTarget = `${index}-${white}-${move}`;
-			logToConsole(`Changed active target to: ${index} ${white ? 'white' : 'black'} ${move}`);
+			log(`Changed active target to: ${index} ${white ? 'white' : 'black'} ${move}`);
 			return { type: 'history', data: { index, white, move } };
 		}
 	}
@@ -133,14 +139,15 @@ function parseActiveStateChange(node) {
 
 const findGame = async () => {
 	// Parse initial moves, before watching for mutations
-	await Promise.race([waitForElement('.rmoves'), waitForElement('.tview2')]);
+	log('Waiting for game to start...');
+	await Promise.race([waitForElement('m2'), waitForElement('move')]);
 	let nodes = doc.querySelector('.moves'); // Live game
 	if (nodes == null) {
 		nodes = doc.querySelector('.tview2'); // Analysis view
 	}
 
 	if (nodes != null) {
-		logToConsole('Parsing initial moves');
+		log('Parsing initial moves');
 		initialMoves = [];
 		// Get last item and don't mark it as history
 		for (let node of nodes.children) {
@@ -154,21 +161,16 @@ const findGame = async () => {
 			initialMoves[initialMoves.length - 1].history = false;
 			ws.send(JSON.stringify({ type: 'initial', data: initialMoves }));
 		}
-		let turn = doc.querySelector('.rclock-turn__text').innerText.trim();
-		let side = turn === 'Your turn' ? (white ? 1 : 0) : white ? 0 : 1;
-		app.playingAs = side;
-		ws.send(
-			JSON.stringify({
-				type: 'setting',
-				data: {
-					key: 'side',
-					value: side,
-				},
-			})
-		);
 	} else {
-		logToConsole('No intial moves to parse...');
+		log('No intial moves to parse...');
 	}
+
+	// Get the side you're plaing as
+	let turn = doc.querySelector('.rclock-turn__text').innerText.trim();
+	let side = turn === 'Your turn' ? (white ? 1 : 0) : white ? 0 : 1;
+	app.playingAs = side;
+	log('Starting as', side == 0 ? 'black' : 'white');
+	ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: side } }));
 
 	if (doc.querySelector('.rmoves') != null) {
 		observer.observe(doc.querySelector('.rmoves'), {
@@ -176,16 +178,16 @@ const findGame = async () => {
 			childList: true,
 			subtree: true,
 		});
-		logToConsole('Attached mutation observer on ".rmoves"');
+		log('Attached mutation observer on ".rmoves"');
 	} else if (doc.querySelector('.tview2') != null) {
 		observer.observe(doc.querySelector('.tview2'), {
 			attributes: true,
 			childList: true,
 			subtree: true,
 		});
-		logToConsole('Attached mutation observer on ".tview2"');
+		log('Attached mutation observer on ".tview2"');
 	} else {
-		logToConsole('No target found for mutation observer to attach to');
+		log('No target found for mutation observer to attach to');
 	}
 };
 
@@ -265,14 +267,14 @@ const main = async () => {
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
 						<input 
-							type="radio" name="side" value="1" v-model="playingAs" 
+							type="radio" name="side" value="1" v-model.number="playingAs" @change="handlePlayingAs"
 							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">White</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
 						<input 
-							type="radio" name="side" value="0" v-model="playingAs" 
+							type="radio" name="side" value="0" v-model.number="playingAs" @change="handlePlayingAs"
 							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">Black</span>
@@ -283,28 +285,28 @@ const main = async () => {
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Run engine for</span>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
 						<input 
-							type="radio" name="run-engine" value="3" v-model="runEngineFor"
+							type="radio" name="run-engine" value="3" v-model.number="runEngineFor" @change="handleRunEngineFor"
 							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">None</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
 						<input
-							type="radio" name="run-engine" value="0" v-model="runEngineFor"
+							type="radio" name="run-engine" value="0" v-model.number="runEngineFor" @change="handleRunEngineFor"
 							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">Me</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
 						<input
-							type="radio" name="run-engine" value="1" v-model="runEngineFor"
+							type="radio" name="run-engine" value="1" v-model.number="runEngineFor" @change="handleRunEngineFor"
 							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">Opponent</span>
 					</label>
 					<label class="radio inline-flex cursor-pointer relative mb-2">
 						<input
-							type="radio" name="run-engine" value="2" v-model="runEngineFor"
+							type="radio" name="run-engine" value="2" v-model.number="runEngineFor" @change="handleRunEngineFor"
 							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">Both</span>
@@ -315,24 +317,24 @@ const main = async () => {
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
 					<label class="checkbox inline-flex cursor-pointer relative mb-2">
 						<input
-							type="checkbox" v-model="useDepth"
+							type="checkbox" v-model="useDepth" @change="handleUseDepth"
 							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">Depth {{ depth }}</span>
 					</label>
 					<input
-						type="range" min="0" max="25" v-model.number="depth"
+						type="range" min="0" max="25" v-model.number="depth" @change="handleDepth"
 						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 					>
 					<label class="checkbox inline-flex cursor-pointer relative mb-2">
 						<input
-							type="checkbox" v-model="useTime"
+							type="checkbox" v-model="useTime" @change="handleUseTime"
 							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2">Time {{ time }}</span>
 					</label>
 					<input
-						type="range" min="0" max="60" v-model.number="time"
+						type="range" min="0" max="60" v-model.number="time" @change="handleTime"
 						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 					>
 				</div>
@@ -353,7 +355,7 @@ const main = async () => {
 			<div id="board" class="bg-gray-800 p-3" v-html="board">
 			</div>
 
-			<div id="console" class="font-mono bg-gray-800 p-3">
+			<div id="console" class="font-mono bg-gray-800 p-3 overflow-y-scroll" @scroll="onConsoleScroll">
 				<pre v-for='message in messages'>{{message}}</pre>
 			</div>
 
@@ -413,7 +415,6 @@ const main = async () => {
 
 		#console {
 			grid-area: console;
-			overflow-y: scroll;
 		}
 
 		.font-sans {
@@ -495,43 +496,50 @@ const main = async () => {
 			depth: 8,
 			useTime: false,
 			time: 0,
+			consoleBottomedOut: true,
 		},
 		methods: {
+			onConsoleScroll(event) {
+				const top = Math.round(event.target.scrollTop);
+				const offset = event.target.scrollHeight - event.target.offsetHeight;
+				this.consoleBottomedOut = top === offset;
+				console.log(this.consoleBottomedOut);
+			},
 			handleEnginePath(event) {
 				let path = event.target.value;
 				path = path.replace(/\\/g, '/');
 				this.enginePath = path;
-				logToConsole('Changed engine path to:', path);
+				log('Changed engine path to:', path);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'engine_path', value: path } }));
 			},
 			handleUseDepth(event) {
 				let value = event.target.value;
-				logToConsole('Changed use depth to:', value);
+				log('Changed use depth to:', value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'use_depth', value } }));
 			},
 			handleUseTime(event) {
 				let value = event.target.value;
-				logToConsole('Changed use time to:', value);
+				log('Changed use time to:', value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'use_time', value } }));
 			},
 			handleDepth(event) {
-				let value = event.target.value;
-				logToConsole('Changed depth to:', value);
+				let value = parseInt(event.target.value);
+				log('Changed depth to:', value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'depth', value } }));
 			},
 			handleTime(event) {
-				let value = event.target.value;
-				logToConsole('Changed time to:', value);
+				let value = parseInt(event.target.value);
+				log('Changed time to:', value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'time', value } }));
 			},
 			handleRunEngineFor(event) {
-				let value = event.target.value;
-				logToConsole('Changed "Run engine for" to:', value);
+				let value = parseInt(event.target.value);
+				log('Changed "Run engine for" to:', value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value } }));
 			},
 			handlePlayingAs(event) {
-				let value = event.target.value;
-				logToConsole('Changed "Playing as" to:', value);
+				let value = parseInt(event.target.value);
+				log('Changed "Playing as" to:', value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value } }));
 			},
 		},
@@ -540,10 +548,10 @@ const main = async () => {
 	try {
 		ws = await connect(`ws://127.0.0.1:5678/${uid}`);
 	} catch {
-		logToConsole('Failed to connect. Make sure the server is running and refresh the page.');
+		log('Failed to connect. Make sure the server is running and refresh the page.');
 		return;
 	}
-	logToConsole('Connection estabished.');
+	log('Connection estabished.');
 	ws.onmessage = function(event) {
 		data = JSON.parse(event.data);
 		switch (data.target) {
@@ -551,7 +559,7 @@ const main = async () => {
 				app.board = data.message;
 				break;
 			case 'error':
-				logToConsole(data.message);
+				log(data.message);
 				break;
 			case 'setting':
 				const { key, value } = data.message;
@@ -570,20 +578,20 @@ const main = async () => {
 							app.$data[key] = value == 'true';
 							break;
 						default:
-							logToConsole('Unknown data type', key, value);
+							log('Unknown data type', key, value);
 							break;
 					}
 				}
 				break;
 			default:
-				logToConsole('Received unknown message type, see console for details');
+				log('Received unknown message type, see console for details');
 				console.log(data);
 		}
 	};
 
 	doc.addEventListener('visibilitychange', () => {
 		ws.send(JSON.stringify({ type: 'visibility', data: !doc.hidden }));
-		logToConsole(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
+		log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
 	});
 	doc.addEventListener('keydown', hotkey);
 	await findGame();
