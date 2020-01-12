@@ -8,11 +8,52 @@ import pyttsx3
 import json
 import configparser
 import os
+from pathlib import Path
 
 # Load configurations
 config = configparser.ConfigParser()
 engine_config = configparser.ConfigParser()
 config.read('settings.ini')
+
+
+def initialize_engine_settings_file():
+    dummy = None
+    if not config.has_option('gui', 'engine_path'):
+        print("Settings.ini is missing engine path. Pls fix and try again.")
+        return
+
+    engine_file = Path(config.get('gui', 'engine_path'))
+    if not engine_file.is_file():
+        print("Given engine path is not valid. Pls fix and try again")
+        return
+
+    try:
+        dummy = chess.engine.SimpleEngine.popen_uci(config.get('gui', 'engine_path'))
+    except Exception as err:
+        print(err)
+        print("Could not open engine. Pls fix and try again")
+        return
+
+    base = os.path.basename(config.get('gui', 'engine_path'))
+    engine_name = os.path.splitext(base)[0] + ".ini"
+    engine_settings_file = Path(engine_name)
+
+    if engine_settings_file.is_file():
+        engine_config.read(engine_name)
+
+    if not engine_config.has_section("engine"):
+        # Create an engine settings file with default values
+        engine_config["engine"] = {}
+        for key, option in dummy.options._store.values():
+            engine_config["engine"][key] = str(option.default)
+        with open(engine_name, 'w+') as configfile:
+            engine_config.write(configfile)
+
+    # Clean up
+    dummy.quit()
+
+
+initialize_engine_settings_file()
 
 # Side
 BLACK = 0
@@ -40,10 +81,11 @@ class GameObject():
         self.visible = True
         self.missed_moves = False
         self.last_move = ''
-        self.side = int(config['defaults']['side'])
-        self.run = int(config['defaults']['run'])
-        self.voice = config['gui']['use_voice'].lower() == 'true'
+        self.side = config.getint('defaults', 'side')
+        self.run = config.getint('defaults', 'run')
+        self.voice = config.getboolean('gui', 'use_voice')
         self.first_init = False
+        self.draw_board = True
 
     def should_run(self):
         if self.run != NONE and ((self.board.turn == self.side and self.run == ME) or
@@ -110,11 +152,20 @@ def create_arrows(moves):
     pass
 
 
+async def configure_engine(uid):
+    engine = games[uid].engine
+    if engine is not None:
+        for key, value in engine_config["engine"].items():
+            option = engine.options[key]
+            if not option.is_managed():
+                await engine.configure({key: value})
+
+
 async def run_engine(uid, ws):
     game: GameObject = games[uid]
     if game.engine is None:
         try:
-            game.transport, game.engine = await chess.engine.popen_uci(config['gui']['engine_path'])
+            game.transport, game.engine = await chess.engine.popen_uci(config.get('gui', 'engine_path'))
         except (FileNotFoundError, OSError) as err:
             await ws.send(serialize_message("error", "Engine path: " + err.strerror))
         await configure_engine(uid)
@@ -122,12 +173,12 @@ async def run_engine(uid, ws):
     if game.should_run():
         # print(game.board)
         limit: chess.engine.Limit = chess.engine.Limit()
-        if (config['gui']['use_depth']):
-            limit.depth = int(config['gui']['depth'])
-        if (config['gui']['use_time']):
-            limit.time = int(config['gui']['time'])
+        if config.getboolean('gui', 'use_depth'):
+            limit.depth = config.getint('gui', 'depth')
+        if config.getboolean('gui', 'use_time'):
+            limit.time = config.getint('gui', 'time')
 
-        multipv = int(engine_config["engine"]['multipv'])
+        # multipv = int(engine_config["engine"]['multipv'])
         result: chess.engine.PlayResult = await game.engine.play(
             board=game.board,
             limit=limit,
@@ -150,31 +201,11 @@ async def run_engine(uid, ws):
         game.missed_moves = False
 
 
-async def configure_engine(uid):
-    engine = games[uid].engine
-    if engine is not None:
-        if "engine" not in engine_config.sections():
-            base = os.path.basename(config['gui']['engine_path'])  # FIX ME! Error handling
-            engine_name = os.path.splitext(base)[0]
-            engine_config.read(engine_name + ".ini")
-        if "engine" in engine_config.sections():
-            for key, value in engine_config["engine"].items():
-                option = engine.options[key]
-                if not option.is_managed():
-                    await engine.configure({key: value})
-        else:  # Add default values for selected engine to settings.ini
-            engine_config["engine"] = {}
-            for key, default_value in engine.config._store.values():
-                engine_config["engine"][key] = str(default_value)  # Default value
-            with open(engine_name + ".ini", 'w+') as configfile:
-                engine_config.write(configfile)
-
-
 async def update_settings(data, uid, ws):
     game = games[uid]
     key = data['key']
     value = data['value']
-    if (key in config['defaults']):
+    if config.has_option('defaults', key):
         # config['defaults'][key] = value # Do not save defaults to file
         if key == 'side':
             game.side = int(value)
@@ -200,7 +231,7 @@ async def update_settings(data, uid, ws):
                     await run_engine(uid, ws)
     # Set gui settings and save to file
     else:
-        config['gui'][key] = value
+        config['gui'][key] = str(value)
         with open('settings.ini', 'w') as configfile:
             config.write(configfile)
 
@@ -228,7 +259,7 @@ async def handle_message(message, uid, ws):
             if game.engine is None:
                 print('Launching engine.')
                 try:
-                    game.transport, game.engine = await chess.engine.popen_uci(config['gui']['engine_path'])
+                    game.transport, game.engine = await chess.engine.popen_uci(config.get('gui', 'engine_path'))
                 except FileNotFoundError as err:
                     await ws.send(serialize_message("error", "Engine path: " + err.strerror))
                     return
@@ -269,21 +300,35 @@ async def new_move(game, data, uid, ws):
 
 
 async def send_defaults(ws):
-    await ws.send(serialize_message("setting", {'key': 'enginePath', 'value': config['gui']['engine_path']}))
-    await ws.send(serialize_message("setting", {'key': 'playingAs', 'value': config['defaults']['side']}))
-    await ws.send(serialize_message("setting", {'key': 'runEngineFor', 'value': config['defaults']['run']}))
-    await ws.send(serialize_message("setting", {'key': 'useVoice', 'value': config['gui']['use_voice']}))
-    await ws.send(serialize_message("setting", {'key': 'useDepth', 'value': config['gui']['use_depth']}))
-    await ws.send(serialize_message("setting", {'key': 'depth', 'value': config['gui']['depth']}))
-    await ws.send(serialize_message("setting", {'key': 'useTime', 'value': config['gui']['use_time']}))
-    await ws.send(serialize_message("setting", {'key': 'time', 'value': config['gui']['time']}))
+    await ws.send(serialize_message("setting", {'key': 'enginePath', 'value': config.get('gui', 'engine_path')}))
+    await ws.send(serialize_message("setting", {'key': 'playingAs', 'value': config.getint('defaults', 'side')}))
+    await ws.send(serialize_message("setting", {'key': 'runEngineFor', 'value': config.getint('defaults', 'run')}))
+    await ws.send(serialize_message("setting", {'key': 'useVoice', 'value': config.getboolean('gui', 'use_voice')}))
+    await ws.send(serialize_message("setting", {'key': 'drawBoard', 'value': config.getboolean('gui', 'draw_board')}))
+    await ws.send(serialize_message("setting", {'key': 'useDepth', 'value': config.getboolean('gui', 'use_depth')}))
+    await ws.send(serialize_message("setting", {'key': 'depth', 'value': config.getint('gui', 'depth')}))
+    await ws.send(serialize_message("setting", {'key': 'useTime', 'value': config.getboolean('gui', 'use_time')}))
+    await ws.send(serialize_message("setting", {'key': 'time', 'value': config.getint('gui', 'time')}))
+
+
+async def send_engine_settings(ws, uid):
+    settings = []
+    dummy = chess.engine.SimpleEngine.popen_uci(config['gui']['engine_path'])
+    for key, value in engine_config["engine"].items():
+        option = dummy.options[key]
+        data = {"name": option.name, 'type': option.type, "default": option.default, "min": option.min, "max": option.max, "value": value, "var": option.var}
+        settings.append(data)
+    await ws.send(serialize_message("engine_settings", settings))
+    dummy.quit()
 
 
 async def connection_handler(websocket, path):
     try:
         print("Client connected", path)
-        # Send default values to client
+        # Send default settings values to client
         await send_defaults(websocket)
+        # Send engine settings to client
+        await send_engine_settings(websocket, path)
 
         async for message in websocket:
             # print(message)
