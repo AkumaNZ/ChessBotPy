@@ -33,16 +33,20 @@ function uuidv4() {
 function hotkey(e) {
 	if (e.altKey && e.code === 'KeyW') {
 		logToConsole('Playing as white');
-		ws.send(JSON.stringify({ type: 'hotkey', data: 1 }));
+		app.playingAs = 1;
+		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 1 } }));
 	} else if (e.altKey && e.code === 'KeyQ') {
 		logToConsole('Playing as black');
-		ws.send(JSON.stringify({ type: 'hotkey', data: 0 }));
+		app.playingAs = 0;
+		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
 	} else if (e.altKey && e.code === 'KeyA') {
 		logToConsole('Playing as Both');
-		ws.send(JSON.stringify({ type: 'hotkey', data: 2 }));
+		app.runEngineFor = 2;
+		ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value: 2 } }));
 	} else if (e.altKey && e.code === 'KeyS') {
 		logToConsole('Stopping');
-		ws.send(JSON.stringify({ type: 'hotkey', data: 3 }));
+		app.runEngineFor = 3;
+		ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value: 3 } }));
 	}
 }
 
@@ -129,7 +133,7 @@ function parseActiveStateChange(node) {
 
 const findGame = async () => {
 	// Parse initial moves, before watching for mutations
-	await Promise.race([waitForElement('move'), waitForElement('m2')]);
+	await Promise.race([waitForElement('.rmoves'), waitForElement('.tview2')]);
 	let nodes = doc.querySelector('.moves'); // Live game
 	if (nodes == null) {
 		nodes = doc.querySelector('.tview2'); // Analysis view
@@ -150,6 +154,18 @@ const findGame = async () => {
 			initialMoves[initialMoves.length - 1].history = false;
 			ws.send(JSON.stringify({ type: 'initial', data: initialMoves }));
 		}
+		let turn = doc.querySelector('.rclock-turn__text').innerText.trim();
+		let side = turn === 'Your turn' ? (white ? 1 : 0) : white ? 0 : 1;
+		app.playingAs = side;
+		ws.send(
+			JSON.stringify({
+				type: 'setting',
+				data: {
+					key: 'side',
+					value: side,
+				},
+			})
+		);
 	} else {
 		logToConsole('No intial moves to parse...');
 	}
@@ -302,15 +318,23 @@ const main = async () => {
 							type="checkbox" v-model="useDepth"
 							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 						>
-						<span class="ml-2">Depth</span>
+						<span class="ml-2">Depth {{ depth }}</span>
 					</label>
+					<input
+						type="range" min="0" max="25" v-model.number="depth"
+						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
+					>
 					<label class="checkbox inline-flex cursor-pointer relative mb-2">
 						<input
 							type="checkbox" v-model="useTime"
 							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 						>
-						<span class="ml-2">Time</span>
+						<span class="ml-2">Time {{ time }}</span>
 					</label>
+					<input
+						type="range" min="0" max="60" v-model.number="time"
+						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
+					>
 				</div>
 
 				<div class="inline-flex flex-col mr-10">
@@ -435,6 +459,26 @@ const main = async () => {
 			left: 0.45rem;
 			top: 0.45rem;
 		}
+
+		.slider::-webkit-slider-thumb {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 1.5rem;
+			height: 1.5rem;
+			background-color: #667eea;
+			border-radius: 9999px;
+			cursor: pointer;
+		}
+
+		.slider::-moz-range-thumb {
+			-webkit-appearance: none;
+			appearance: none;
+			width: 1.5rem;
+			height: 1.5rem;
+			background-color: #667eea;
+			border-radius: 9999px;
+			cursor: pointer;
+		}
 		// Generated tailwindcss goes here
 
 		</style>`;
@@ -459,6 +503,36 @@ const main = async () => {
 				this.enginePath = path;
 				logToConsole('Changed engine path to:', path);
 				ws.send(JSON.stringify({ type: 'setting', data: { key: 'engine_path', value: path } }));
+			},
+			handleUseDepth(event) {
+				let value = event.target.value;
+				logToConsole('Changed use depth to:', value);
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'use_depth', value } }));
+			},
+			handleUseTime(event) {
+				let value = event.target.value;
+				logToConsole('Changed use time to:', value);
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'use_time', value } }));
+			},
+			handleDepth(event) {
+				let value = event.target.value;
+				logToConsole('Changed depth to:', value);
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'depth', value } }));
+			},
+			handleTime(event) {
+				let value = event.target.value;
+				logToConsole('Changed time to:', value);
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'time', value } }));
+			},
+			handleRunEngineFor(event) {
+				let value = event.target.value;
+				logToConsole('Changed "Run engine for" to:', value);
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value } }));
+			},
+			handlePlayingAs(event) {
+				let value = event.target.value;
+				logToConsole('Changed "Playing as" to:', value);
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value } }));
 			},
 		},
 	});

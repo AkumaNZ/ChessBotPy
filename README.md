@@ -16,24 +16,23 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 -   Lichess parser does not handle interrupts in analysis mode.
 -   Should we send full board state from JS every time?
--   Auto managed settings are saved to settings file?
 
 ## Todo
 
--   Handle option for playing as Black/White
-    -   Get the side you're playing as automatically
--   Handle option for RunEngineFor Me, Opponent, Both, None
 -   Handle managed engine settings
     -   Limit
     -   MultiPV
--   Handle saved settings (defaults) and game specific settings (temporary)
+-   Handle applying default settings in a better way
+    -   Changing setting never saves to file, but only when save button is clicked?
 -   Parse polybooks in the correct order
     -   Send all the available moves to client
     -   Combine with run engine analysis, to first use polybook moves
 -   Send engine data to client
 -   Create panel for PVs
-    -   CP
+    -   Include CP
 -   Main info and buttons
+    -   Enable voice
+    -   Enable SVG board
     -   FEN
 -   SVG Board
     -   Draw arrows in SVG
@@ -42,6 +41,7 @@ To be able connect to a websocket, a site must not have restricted content secur
     -   Auto scroll if at the bottom
     -   Log settings
         -   What to log
+    -   Text should wrap
 -   Implement auto generated engine settings
     -   Create custom checkbox, radio, slider, etc
     -   Save settings logic

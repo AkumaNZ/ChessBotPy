@@ -33,20 +33,21 @@ print('Initialized TTS')
 
 class GameObject():
 
-    def __init__(self, board, engine, transport):
+    def __init__(self, board):
         self.board: chess.Board = board
-        self.engine: chess.engine.EngineProtocol = engine
-        self.transport = transport
+        self.engine: chess.engine.EngineProtocol = None
+        self.transport = None
         self.visible = True
         self.missed_moves = False
         self.last_move = ''
         self.side = int(config['defaults']['side'])
         self.run = int(config['defaults']['run'])
         self.voice = config['gui']['use_voice'].lower() == 'true'
+        self.first_init = False
 
     def should_run(self):
-        if game.run != NONE and ((game.board.turn == game.side and game.run == ME) or
-                                 (game.board.turn != game.side and game.run == OPPONENT) or game.run == BOTH):
+        if self.run != NONE and ((self.board.turn == self.side and self.run == ME) or
+                                 (self.board.turn != self.side and self.run == OPPONENT) or self.run == BOTH):
             return True
         return False
 
@@ -111,6 +112,13 @@ def create_arrows(moves):
 
 async def run_engine(uid, ws):
     game: GameObject = games[uid]
+    if game.engine is None:
+        try:
+            game.transport, game.engine = await chess.engine.popen_uci(config['gui']['engine_path'])
+        except (FileNotFoundError, OSError) as err:
+            await ws.send(serialize_message("error", "Engine path: " + err.strerror))
+        await configure_engine(uid)
+
     if game.should_run():
         # print(game.board)
         limit: chess.engine.Limit = chess.engine.Limit()
@@ -164,11 +172,35 @@ async def configure_engine(uid):
                 engine_config.write(configfile)
 
 
-def update_settings(data):
+async def update_settings(data, uid, ws):
+    game = games[uid]
     key = data['key']
     value = data['value']
     if (key in config['defaults']):
-        config['defaults'][key] = value
+        # config['defaults'][key] = value # Do not save defaults to file
+        if key == 'side':
+            game.side = value
+            print("Playing as", value)
+        elif key == 'run':
+            game.run = value
+            if value == NONE:
+                if game.engine is not None:
+                    print('Paused. Closing engine...')
+                    await game.engine.quit()
+                    game.engine = None
+                    game.transport = None
+            else:
+                print("Running engine for", value)
+                if game.engine is None:
+                    print('Launching engine.')
+                    try:
+                        game.transport, game.engine = await chess.engine.popen_uci(config['gui']['engine_path'])
+                    except FileNotFoundError as err:
+                        await ws.send(serialize_message("error", "Engine path: " + err.strerror))
+                        return
+                    await configure_engine(uid)
+                    await run_engine(uid, ws)
+    # Set gui settings and save to file
     else:
         config['gui'][key] = value
         with open('settings.ini', 'w') as configfile:
@@ -176,27 +208,19 @@ def update_settings(data):
 
 
 async def handle_message(message, uid, ws):
-    # Parse json message to python
-    data = json.loads(message)
-
-    # Handle engine path change before anything else
-    if data['type'] == 'setting':
-        update_settings(data['data'])
-
-    # Initialize board and engine for new UIDs
+    # Initialize game object with a new board
     if uid not in games:
-        board = chess.Board()
-        try:
-            transport, engine = await chess.engine.popen_uci(config['gui']['engine_path'])
-        except (FileNotFoundError, OSError) as err:
-            await ws.send(serialize_message("error", "Engine path: " + err.strerror))
-            return
-        games[uid] = GameObject(board, engine, transport)
-        await configure_engine(uid)
-        # print(engine.options._store)
+        games[uid] = GameObject(chess.Board())
 
     # Shorthand for the game
     game = games[uid]
+
+    # Parse json message to python
+    data = json.loads(message)
+
+    # Handle setting changes before engine is initialized
+    if data['type'] == 'setting':
+        await update_settings(data['data'], uid, ws)
 
     if data['type'] == 'visibility':
         game.visible = data['data']
@@ -219,31 +243,10 @@ async def handle_message(message, uid, ws):
         # Run engine if there were any missed moves while game was not visible
         if game.visible and game.missed_moves:
             await run_engine(uid, ws)
-    # Hotkeys
-    elif data['type'] == 'hotkey':
-        side = data['data']
-        game.side = side
-        if side == NONE:
-            print('Paused')
-            print('Closing engine.')
-            await game.engine.quit()
-            game.engine = None
-            game.transport = None
-        else:
-            print("Playing as", side)
-            if game.engine is None:
-                print('Launching engine.')
-                try:
-                    game.transport, game.engine = await chess.engine.popen_uci(config['gui']['engine_path'])
-                except FileNotFoundError as err:
-                    await ws.send(serialize_message("error", "Engine path: " + err.strerror))
-                    return
-                await configure_engine(uid)
-                await run_engine(uid, ws)
     # Run initial moves
     elif data['type'] == 'initial':
         for move in data['data']:
-            await new_move(game, move, uid, ws)
+            await new_move(game, move['data'], uid, ws)
     # Run new moves
     elif data['type'] == 'move':
         await new_move(game, data['data'], uid, ws)
