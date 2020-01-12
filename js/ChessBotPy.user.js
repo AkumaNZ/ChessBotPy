@@ -344,10 +344,18 @@ const main = async () => {
 				</div>
 
 				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine</span>
-					<label for="engine-path">
-						Path
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Principal variations</span>
+					<label class="mb-2">
+						Multi PV {{ multipv }}
 					</label>
+					<input
+						type="range" min="1" max="20" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
+						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
+					>
+				</div>
+
+				<div class="inline-flex flex-col mr-10 mb-4">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
 					<input
 						type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')"
 						class="bg-gray-900 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
@@ -392,22 +400,27 @@ const main = async () => {
 
 			<div id="settings" class="bg-gray-800 p-3 overflow-y-scroll">
 				<h1 class="text-4xl font-display text-gray-200">Engine settings</h1>
-				<div v-for="setting in engineSettings" class="mb-4 w-1/2">
+				<div v-for="setting in engineSettings" class="mb-4">
 
 					<div class="text-gray-500 font-display font-bold text-xs uppercase tracking-wide mb-2">{{ setting.name }}</div>
 
 					<span v-if="setting.type === 'spin'">
 						<input
-							type="range" :min="setting.min" :max="setting.max" :value="setting.value"
-							class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mb-4"
+							type="range" :min="setting.min" :max="setting.max" v-model.number="setting.value"
+							class="slider appearance-none w-64 bg-gray-900 outline-none h-3 rounded-full mb-4"
+							@change="handleEngineSettingChange(setting.name, setting.value)"
 						>
-						<span class="text-xs ml-2">{{ setting.value }}</span> <span class="text-xs text-gray-600">(def. {{ setting.default }})</span>
+						<span class="text-sm ml-2">{{ setting.value }}</span> <span class="text-sm text-gray-600"> ({{ setting.default }})</span>
 					</span>
 
 					<span v-else-if="setting.type === 'combo'">
-						<div class="inline-block relative w-40">
-							<select class="block appearance-none w-full bg-gray-700 px-4 py-2 pr-8 rounded border-2 border-gray-700 focus:outline-none focus:border-indigo-500">
-								<option v-for="opt in setting.var" :value="opt.var">{{opt}}</option>
+						<div class="inline-block relative w-64">
+							<select 
+								v-model="setting.value"
+								@change="handleEngineSettingChange(setting.name, setting.value)"
+								class="block appearance-none w-full bg-gray-700 px-4 py-2 pr-8 rounded border-2 border-gray-700 focus:outline-none focus:border-indigo-500"
+							>
+								<option v-for="opt in setting.var">{{opt}}</option>
 							</select>
 							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
 								<svg class="fill-current text-white h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -417,21 +430,26 @@ const main = async () => {
 
 					<span v-else-if="setting.type === 'string'">
 						<input
-							type="text" :value="setting.value"
-							class="bg-gray-900 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 mb-4 focus:outline-none focus:border-indigo-500"
+							type="text" v-model="setting.value"
+							@change="handleEngineSettingChange(setting.name, setting.value)"
+							class="bg-gray-900 w-64 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 mb-4 focus:outline-none focus:border-indigo-500"
 						>
-						<span class="text-xs text-gray-600 ml-2">(def. {{ setting.default }})</span>
+						<span class="text-sm text-gray-600 ml-2"> ({{ setting.default }})</span>
 					</span>
 
 					<span v-else-if="setting.type === 'check'">
 						<label class="checkbox inline-flex cursor-pointer relative mb-2">
-							<input type="checkbox" class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none">
+							<input
+								type="checkbox" v-model="setting.value"
+								@change="handleEngineSettingChange(setting.name, setting.value)"
+								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							>
 							<span class="ml-2">{{ setting.value }}</span>
 						</label>
 					</span>
 
 					<span v-else-if="setting.type === 'button'">
-						<button class="bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded">
+						<button class="bg-indigo-500 w-64 hover:bg-indigo-600 text-white py-2 px-4 rounded">
 							{{ setting.name }}
 						</button>
 					</span>
@@ -590,13 +608,13 @@ const main = async () => {
 			engineSettings: [],
 			drawBoard: true,
 			useVoice: true,
+			multipv: 1,
 		},
 		methods: {
 			onConsoleScroll(event) {
 				const top = Math.round(event.target.scrollTop);
 				const offset = event.target.scrollHeight - event.target.offsetHeight;
 				this.consoleBottomedOut = top === offset;
-				console.log(this.consoleBottomedOut);
 			},
 			handleSettingChange(event, key, type) {
 				let value = event.target.value;
@@ -609,6 +627,10 @@ const main = async () => {
 				}
 				log(`Changed ${key} to:`, value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key, value } }));
+			},
+			handleEngineSettingChange(key, value) {
+				log(`Changed engine setting ${key} to:`, value);
+				ws.send(JSON.stringify({ type: 'engine_setting', data: { key, value } }));
 			},
 		},
 	});

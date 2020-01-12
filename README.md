@@ -27,8 +27,6 @@ To be able connect to a websocket, a site must not have restricted content secur
 -   Create panel for PVs
     -   Include CP
 -   Main info and buttons
-    -   Enable voice
-    -   Enable SVG board
     -   FEN
 -   SVG Board
     -   Draw arrows in SVG
