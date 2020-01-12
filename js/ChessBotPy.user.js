@@ -395,7 +395,7 @@ const main = async () => {
 
 			<div id="console" class="font-mono bg-gray-800 p-3 overflow-y-scroll" @scroll="onConsoleScroll">
 				<h1 class="text-4xl font-display text-gray-200">Console</h1>
-				<pre v-for='message in messages'>{{message}}</pre>
+				<pre v-for='message in messages' class="whitespace-pre-wrap">{{message}}</pre>
 			</div>
 
 			<div id="settings" class="bg-gray-800 p-3 overflow-y-scroll">

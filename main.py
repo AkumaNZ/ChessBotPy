@@ -178,7 +178,7 @@ async def run_engine(uid, ws):
         if config.getboolean('gui', 'use_time'):
             limit.time = config.getint('gui', 'time')
 
-        # multipv = int(engine_config['engine']['multipv'])
+        # multipv = config.getint('gui', 'multipv')
         result: chess.engine.PlayResult = await game.engine.play(
             board=game.board,
             limit=limit,

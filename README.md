@@ -23,21 +23,18 @@ To be able connect to a websocket, a site must not have restricted content secur
     -   Send all the available moves to client
     -   Combine with run engine analysis, to first use polybook moves
 -   Send engine data to client
-    -   Log best moves, etc?
 -   Create panel for PVs
     -   Include CP
--   Main info and buttons
+-   Main info
     -   FEN
 -   SVG Board
     -   Draw arrows in SVG
     -   Map color of arrows to PV table somehow
 -   Console
-    -   Log settings (What to log)
-    -   Text should wrap
--   Implement auto generated engine settings
-    -   Create custom checkbox, radio, slider, etc
-    -   Save settings logic
--   Handle managed engine settings
-    -   MultiPV
+    -   Add logs
+        -   Best move, etc
+    -   Log settings (User can choose what's logged)
 -   Handle applying default settings in a better way
     -   Changing setting never saves to file, but only when save button is clicked?
+    -   Refactor game object settings
+        -   We should get our settings from there
