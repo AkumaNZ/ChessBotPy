@@ -19,16 +19,15 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Todo
 
--   Parse polybooks in the correct order
-    -   Send all the available moves to client
-    -   Combine with run engine analysis, to first use polybook moves
+-   Make PV selectable from table
+-   Run engine button
+-   User set volume and pitch of TTS
+-   Refactor config stuff to seperate module
+-   Refactor stuff into own functions
 -   Send engine data to client
+    -   FEN
 -   Create panel for PVs
     -   Include CP
--   Main info
-    -   FEN
--   SVG Board
-    -   Draw arrows in SVG
     -   Map color of arrows to PV table somehow
 -   Console
     -   Add logs
@@ -37,4 +36,4 @@ To be able connect to a websocket, a site must not have restricted content secur
 -   Handle applying default settings in a better way
     -   Changing setting never saves to file, but only when save button is clicked?
     -   Refactor game object settings
-        -   We should get our settings from there
+        -   Should we get our settings from there?

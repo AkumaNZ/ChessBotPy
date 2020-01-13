@@ -140,7 +140,7 @@ function parseActiveStateChange(node) {
 const findGame = async () => {
 	// Parse initial moves, before watching for mutations
 	log('Waiting for game to start...');
-	await Promise.race([waitForElement('m2', 60), waitForElement('move', 60)]);
+	await Promise.race([waitForElement('m2', 2), waitForElement('move', 2)]);
 	let nodes = doc.querySelector('.moves'); // Live game
 	if (nodes == null) {
 		nodes = doc.querySelector('.tview2'); // Analysis view
@@ -158,7 +158,7 @@ const findGame = async () => {
 		}
 		if (initialMoves.length > 0) {
 			// Set last move as not history
-			initialMoves[initialMoves.length - 1].history = false;
+			initialMoves[initialMoves.length - 1].data.history = false;
 			ws.send(JSON.stringify({ type: 'initial', data: initialMoves }));
 		}
 	} else {
@@ -213,6 +213,7 @@ const waitForElement = async (selector, timeout) => {
 		await sleep(100);
 	}
 	console.warn('Waiting for element timed out');
+	return null;
 };
 
 const loadScript = url => {
@@ -242,7 +243,10 @@ const loadCSS = url => {
 
 const main = async () => {
 	if (window.location.href != 'https://lichess.org/.bot') {
-		await Promise.race([waitForElement('.rmoves', 60), waitForElement('.tview2', 60)]);
+		element = await Promise.race([waitForElement('.rmoves', 60), waitForElement('.tview2', 60)]);
+		if (element == null) {
+			return;
+		}
 		popup = window.open('https://lichess.org/.bot', '_blank');
 		window.addEventListener('beforeunload', function(event) {
 			popup.close();
@@ -265,7 +269,7 @@ const main = async () => {
 	body.innerHTML = `
 	<div id="app" class="font-sans text-gray-100">
 		<div id="layout">
-			<div id="main" class="bg-gray-800 p-3">
+			<div id="main" class="bg-gray-800 p-3 overflow-y-auto">
 
 				<div class="inline-flex flex-col mr-10 mb-4">
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
@@ -349,7 +353,7 @@ const main = async () => {
 						Multi PV {{ multipv }}
 					</label>
 					<input
-						type="range" min="1" max="20" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
+						type="range" min="1" max="5" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
 						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 					>
 				</div>
@@ -357,8 +361,8 @@ const main = async () => {
 				<div class="inline-flex flex-col mr-10 mb-4">
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
 					<input
-						type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')"
-						class="bg-gray-900 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
+						type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
+						class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 					>
 				</div>
 
@@ -384,21 +388,54 @@ const main = async () => {
 					</label>
 				</div>
 
+				<div class="inline-flex flex-col mr-10 mb-4">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book</span>
+					<input
+						type="text" v-model="book1" @change="handleSettingChange($event, 'bookfile', 'path')" :title="book1"
+						class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
+					>
+				</div>
+
+				<div class="inline-flex flex-col mr-10 mb-4">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 2</span>
+					<input
+						type="text" v-model="book2" @change="handleSettingChange($event, 'bookfile2', 'path')" :title="book2"
+						class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
+					>
+				</div>
+
+				<div class="inline-flex flex-col mb-4">
+					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engline log</span>
+					<label class="checkbox inline-flex cursor-pointer relative mb-2">
+						<input
+							type="checkbox" v-model="logEngine" @change="handleSettingChange($event, 'log_engine', 'checkbox')"
+							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+						>
+						<span class="ml-2" title="Clear log each time before engine is ran">Clear log</span>
+					</label>
+				</div>
+
 			</div>
 
 			<div id="board" class="bg-gray-800 p-3" v-html="board">
 			</div>
 
 			<div id="pvs" class="bg-gray-800 p-3">
-				Principle variations galore!
+				<div v-for="line in pvs">
+					MultiPV: {{ line.multipv }}
+					Score: {{ line.score }}
+					<span v-for="mov in line.pv">
+						{{ mov }}
+					</span>
+				</div>
 			</div>
 
-			<div id="console" class="font-mono bg-gray-800 p-3 overflow-y-scroll" @scroll="onConsoleScroll">
+			<div id="console" class="font-mono bg-gray-800 p-3 overflow-y-auto" @scroll="onConsoleScroll">
 				<h1 class="text-4xl font-display text-gray-200">Console</h1>
 				<pre v-for='message in messages' class="whitespace-pre-wrap">{{message}}</pre>
 			</div>
 
-			<div id="settings" class="bg-gray-800 p-3 overflow-y-scroll">
+			<div id="settings" class="bg-gray-800 p-3 overflow-y-auto">
 				<h1 class="text-4xl font-display text-gray-200">Engine settings</h1>
 				<div v-for="setting in engineSettings" class="mb-4">
 
@@ -430,9 +467,9 @@ const main = async () => {
 
 					<span v-else-if="setting.type === 'string'">
 						<input
-							type="text" v-model="setting.value"
+							type="text" v-model="setting.value" :title="setting.value"
 							@change="handleEngineSettingChange(setting.name, setting.value)"
-							class="bg-gray-900 w-64 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 mb-4 focus:outline-none focus:border-indigo-500"
+							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 mb-4 focus:outline-none focus:border-indigo-500"
 						>
 						<span class="text-sm text-gray-600 ml-2"> ({{ setting.default }})</span>
 					</span>
@@ -440,16 +477,19 @@ const main = async () => {
 					<span v-else-if="setting.type === 'check'">
 						<label class="checkbox inline-flex cursor-pointer relative mb-2">
 							<input
-								type="checkbox" v-model="setting.value"
+								type="checkbox" v-model="setting.value" true-value="True" false-value="False"
 								@change="handleEngineSettingChange(setting.name, setting.value)"
 								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 							>
-							<span class="ml-2">{{ setting.value }}</span>
+							<span class="ml-2">{{ setting.value.toString().toLowerCase() == 'true' ? 'Enabled' : 'Disabled' }}</span>
 						</label>
 					</span>
 
 					<span v-else-if="setting.type === 'button'">
-						<button class="bg-indigo-500 w-64 hover:bg-indigo-600 text-white py-2 px-4 rounded">
+						<button
+							class="bg-indigo-500 w-64 hover:bg-indigo-600 text-white py-2 px-4 rounded"
+							@click='handleButton(setting.name)'
+						>
 							{{ setting.name }}
 						</button>
 					</span>
@@ -511,6 +551,10 @@ const main = async () => {
 
 		#board > svg {
 			height: 100%;
+		}
+
+		#board > svg line, #board > svg polygon {
+			opacity: 100%
 		}
 
 		#settings {
@@ -609,6 +653,10 @@ const main = async () => {
 			drawBoard: true,
 			useVoice: true,
 			multipv: 1,
+			book1: '',
+			book2: '',
+			logEngine: '',
+			pvs: [],
 		},
 		methods: {
 			onConsoleScroll(event) {
@@ -631,6 +679,12 @@ const main = async () => {
 			handleEngineSettingChange(key, value) {
 				log(`Changed engine setting ${key} to:`, value);
 				ws.send(JSON.stringify({ type: 'engine_setting', data: { key, value } }));
+			},
+			handleButton(key) {
+				if (key === 'Clear Hash') {
+					log('Clearing hash...');
+					ws.send(JSON.stringify({ type: 'clear_hash', data: true }));
+				}
 			},
 		},
 	});
@@ -664,6 +718,9 @@ const main = async () => {
 			case 'engine_settings':
 				app.engineSettings = data.message;
 				log('Received engine settings');
+				break;
+			case 'multipv':
+				app.pvs = data.message;
 				break;
 			default:
 				log('Received unknown message type, see console for details');

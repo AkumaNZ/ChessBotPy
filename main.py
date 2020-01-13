@@ -3,8 +3,8 @@ import websockets
 import chess
 import chess.engine
 import chess.svg
+import chess.polyglot
 import pyttsx3
-# import jsonpickle
 import json
 import configparser
 import os
@@ -17,6 +17,7 @@ config.read('settings.ini')
 
 
 def initialize_engine_settings_file():
+    engine_config.clear()
     dummy = None
     if not config.has_option('gui', 'engine_path'):
         print('Settings.ini is missing engine path. Pls fix and try again.')
@@ -45,7 +46,8 @@ def initialize_engine_settings_file():
         # Create an engine settings file with default values
         engine_config['engine'] = {}
         for key, option in dummy.options._store.values():
-            engine_config['engine'][key] = str(option.default)
+            if not option.is_managed():
+                engine_config['engine'][key] = str(option.default)
         with open(engine_name, 'w+') as config_file:
             engine_config.write(config_file)
 
@@ -83,9 +85,6 @@ class GameObject():
         self.last_move = ''
         self.side = config.getint('defaults', 'side')
         self.run = config.getint('defaults', 'run')
-        self.voice = config.getboolean('gui', 'use_voice')
-        self.draw_board = config.getboolean('gui', 'draw_board')
-        self.multipv = config.getint('gui', 'multipv')
 
     def should_run(self):
         if self.run != NONE and ((self.board.turn == self.side and self.run == ME) or
@@ -103,6 +102,65 @@ digits = {
     '6': 'six ',
     '7': 'seven ',
     '8': 'eight ',
+}
+
+arrow_colors = {
+    # Black
+    0: {
+        # Red
+        0: [
+            'hsl(356, 75%, 53%, 1.0)', 'hsl(356, 75%, 53%, 0.85)', 'hsl(356, 75%, 53%, 0.6)', 'hsl(356, 75%, 53%, 0.45)',
+            'hsl(356, 75%, 53%, 0.3)', 'hsl(356, 75%, 53%, 0.3)', 'hsl(356, 75%, 53%, 0.055)', 'hsl(356, 75%, 53%, 0.05)'
+        ],
+        # Teal
+        1: [
+            'hsl(168, 78%, 41%, 1.0)', 'hsl(168, 78%, 41%, 0.85)', 'hsl(168, 78%, 41%, 0.6)', 'hsl(168, 78%, 41%, 0.45)',
+            'hsl(168, 78%, 41%, 0.3)', 'hsl(168, 78%, 41%, 0.3)', 'hsl(168, 78%, 41%, 0.055)', 'hsl(168, 78%, 41%, 0.05)'
+        ],
+        # Yellow
+        2: [
+            'hsl(42, 87%, 55%, 1.0)', 'hsl(42, 87%, 55%, 0.85)', 'hsl(42, 87%, 55%, 0.6)', 'hsl(42, 87%, 55%, 0.45)',
+            'hsl(42, 87%, 55%, 0.3)', 'hsl(42, 87%, 55%, 0.3)', 'hsl(42, 87%, 55%, 0.055)', 'hsl(42, 87%, 55%, 0.05)'
+        ],
+        # Magenta
+        3: [
+            'hsl(305, 80%, 49%, 1.0)', 'hsl(305, 80%, 49%, 0.85)', 'hsl(305, 80%, 49%, 0.6)', 'hsl(305, 80%, 49%, 0.45)',
+            'hsl(305, 80%, 49%, 0.3)', 'hsl(305, 80%, 49%, 0.3)', 'hsl(305, 80%, 49%, 0.055)', 'hsl(305, 80%, 49%, 0.05)'
+        ],
+        # Pink
+        4: [
+            'hsl(328, 85%, 46%, 1.0)', 'hsl(328, 85%, 46%, 0.85)', 'hsl(328, 85%, 46%, 0.6)', 'hsl(328, 85%, 46%, 0.45)',
+            'hsl(328, 85%, 46%, 0.3)', 'hsl(328, 85%, 46%, 0.3)', 'hsl(328, 85%, 46%, 0.055)', 'hsl(328, 85%, 46%, 0.05)'
+        ],
+    },
+    # White
+    1: {
+        # Green
+        0: [
+            'hsl(123, 57%, 45%, 1.0)', 'hsl(123, 57%, 45%, 0.85)', 'hsl(123, 57%, 45%, 0.6)', 'hsl(123, 57%, 45%, 0.45)',
+            'hsl(123, 57%, 45%, 0.3)', 'hsl(123, 57%, 45%, 0.3)', 'hsl(123, 57%, 45%, 0.055)', 'hsl(123, 57%, 45%, 0.05)'
+        ],
+        # Orange
+        1: [
+            'hsl(16, 94%, 61%, 1.0)', 'hsl(16, 94%, 61%, 0.85)', 'hsl(16, 94%, 61%, 0.6)', 'hsl(16, 94%, 61%, 0.45)',
+            'hsl(16, 94%, 61%, 0.3)', 'hsl(16, 94%, 61%, 0.3)', 'hsl(16, 94%, 61%, 0.055)', 'hsl(16, 94%, 61%, 0.05)'
+        ],
+        # Indigo
+        2: [
+            'hsl(224, 69%, 54%, 1.0)', 'hsl(224, 69%, 54%, 0.85)', 'hsl(224, 69%, 54%, 0.6)', 'hsl(224, 69%, 54%, 0.45)',
+            'hsl(224, 69%, 54%, 0.3)', 'hsl(224, 69%, 54%, 0.3)', 'hsl(224, 69%, 54%, 0.055)', 'hsl(224, 69%, 54%, 0.05)'
+        ],
+        # Lime Green
+        3: [
+            'hsl(90, 84%, 55%, 1.0)', 'hsl(90, 84%, 55%, 0.85)', 'hsl(90, 84%, 55%, 0.6)', 'hsl(90, 84%, 55%, 0.45)',
+            'hsl(90, 84%, 55%, 0.3)', 'hsl(90, 84%, 55%, 0.3)', 'hsl(90, 84%, 55%, 0.055)', 'hsl(90, 84%, 55%, 0.05)'
+        ],
+        # Blue
+        4: [
+            'hsl(197, 92%, 61%, 1.0)', 'hsl(197, 92%, 61%, 0.85)', 'hsl(197, 92%, 61%, 0.6)', 'hsl(197, 92%, 61%, 0.45)',
+            'hsl(197, 92%, 61%, 0.3)', 'hsl(197, 92%, 61%, 0.3)', 'hsl(197, 92%, 61%, 0.055)', 'hsl(197, 92%, 61%, 0.05)'
+        ],
+    },
 }
 
 
@@ -148,10 +206,6 @@ def serialize_message(target, message):
     return json.dumps({'target': target, 'message': message})
 
 
-def create_arrows(moves):
-    pass
-
-
 async def configure_engine(uid):
     engine = games[uid].engine
     if engine is not None:
@@ -159,6 +213,14 @@ async def configure_engine(uid):
             option = engine.options[key]
             if not option.is_managed():
                 await engine.configure({key: value})
+
+
+def add_arrow(arrows, move, turn, pv, n):
+    if n > 7:
+        color = "hsla(0, 0%, 0%, 0)"
+    else:
+        color = arrow_colors[turn][pv][n]
+    arrows.append(chess.svg.Arrow(tail=move.from_square, head=move.to_square, color=color))
 
 
 async def run_engine(uid, ws):
@@ -171,6 +233,7 @@ async def run_engine(uid, ws):
         await configure_engine(uid)
 
     if game.should_run():
+        arrows = []
         # print(game.board)
         limit: chess.engine.Limit = chess.engine.Limit()
         if config.getboolean('gui', 'use_depth'):
@@ -178,28 +241,77 @@ async def run_engine(uid, ws):
         if config.getboolean('gui', 'use_time'):
             limit.time = config.getint('gui', 'time')
 
-        # multipv = config.getint('gui', 'multipv')
-        result: chess.engine.PlayResult = await game.engine.play(
-            board=game.board,
-            limit=limit,
-            # multipv=multipv,
-            game=uid,
-            info=chess.engine.INFO_ALL,
-        )
-        if config.getboolean('gui', 'draw_board'):
-            # arrows = create_arrows(moves)
-            svg = chess.svg.board(board=game.board, coordinates=False)
+        if config.getboolean('gui', 'log_engine'):
+            open(engine_config.get('engine', 'debug log file'), 'w').close()
+        # Look for opening moves from books
+        found_book_move = False
+        openings = []
+        if config.has_option('gui', 'bookfile'):
+            book = config.get('gui', 'bookfile')
+            if Path(book).is_file():
+                with chess.polyglot.open_reader(book) as reader:
+                    arrow_pv = 0
+                    for entry in reader.find_all(game.board):
+                        found_book_move = True
+                        openings.append(entry)
+                        add_arrow(arrows, entry.move, int(game.board.turn), arrow_pv, 0)
+                        arrow_pv += 1
 
-        await ws.send(serialize_message('board', svg))
-        best_move = game.board.san(result.move)
+        if not found_book_move and config.has_option('gui', 'bookfile2'):
+            book = config.get('gui', 'bookfile2')
+            if Path(book).is_file():
+                arrow_pv = 0
+                with chess.polyglot.open_reader(book) as reader:
+                    for entry in reader.find_all(game.board):
+                        found_book_move = True
+                        openings.append(entry)
+                        add_arrow(arrows, entry.move, int(game.board.turn), arrow_pv, 0)
+                        arrow_pv += 1
+
+        if not found_book_move:
+            multipv = config.getint('gui', 'multipv')
+            results = await game.engine.analyse(
+                board=game.board,
+                limit=limit,
+                multipv=multipv,
+                game=uid,
+                info=chess.engine.INFO_ALL,
+            )
+
+        if found_book_move:
+            best_move = game.board.san(openings[0].move)
+            opening_moves = [{"multipv": i, "pv": [game.board.san(x.move)], "score": x.weight} for i, x in enumerate(openings)]
+            await ws.send(serialize_message("multipv", opening_moves))
+        else:
+            best_move = game.board.san(results[0].pv[0])
+            multipv_data = []
+            for multipv in results:
+                move_counter = 0
+                pv = []
+                for move in multipv.pv:
+                    san = game.board.san(move)
+                    add_arrow(arrows, move, int(game.board.turn), multipv.multipv - 1, move_counter // 2)
+                    pv.append(san)
+                    game.board.push(move)
+                    move_counter += 1
+                for i in range(move_counter):
+                    game.board.pop()
+                score = multipv.score.relative.cp
+                unit = {'multipv': multipv.multipv, "pv": pv, "score": score}
+                multipv_data.append(unit)
+            await ws.send(serialize_message("multipv", multipv_data))
+        print('Best move:', best_move)
+
+        if config.getboolean('gui', 'draw_board'):
+            svg = chess.svg.board(board=game.board, coordinates=False, arrows=arrows)
+            await ws.send(serialize_message('board', svg))
+
         if config.getboolean('gui', 'use_voice') and not game.last_move['history']:
             tts = parse_speech(best_move)
             # print(tts)
             speech.stop()
             speech.say(tts)
             speech.iterate()
-        # print('Ponder:', game.board.san(result.ponder))
-        print('Best move:', best_move)
         game.missed_moves = False
 
 
@@ -236,6 +348,9 @@ async def update_settings(data, uid, ws):
         config['gui'][key] = str(value)
         with open('settings.ini', 'w') as config_file:
             config.write(config_file)
+        # Re-initialize engine settings file, if engine path was changed.
+        if key == 'engine_path':
+            initialize_engine_settings_file()
 
 
 async def update_engine_settings(data, uid, ws):
@@ -296,6 +411,10 @@ async def handle_message(message, uid, ws):
         await new_move(game, data['data'], uid, ws)
     elif data['type'] == 'setting' or data['type'] == 'engine_setting':
         pass  # Settings are handled earlier
+    elif data['type'] == 'clear_hash':
+        if game.engine is not None:
+            await game.engine.configure({"Clear Hash": True})
+            print("Clearing hash...")
     else:
         if 'type' in data:
             print('Unknown type', data['type'])
@@ -325,6 +444,9 @@ async def send_defaults(ws):
     await ws.send(serialize_message('setting', {'key': 'multipv', 'value': config.getint('gui', 'multipv')}))
     await ws.send(serialize_message('setting', {'key': 'useTime', 'value': config.getboolean('gui', 'use_time')}))
     await ws.send(serialize_message('setting', {'key': 'time', 'value': config.getint('gui', 'time')}))
+    await ws.send(serialize_message('setting', {'key': 'book1', 'value': config.get('gui', 'bookfile')}))
+    await ws.send(serialize_message('setting', {'key': 'book2', 'value': config.get('gui', 'bookfile2')}))
+    await ws.send(serialize_message('setting', {'key': 'logEngine', 'value': config.getboolean('gui', 'log_engine')}))
 
 
 async def send_engine_settings(ws, uid):
