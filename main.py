@@ -303,7 +303,8 @@ async def run_engine(uid, ws):
         print('Best move:', best_move)
 
         if config.getboolean('gui', 'draw_board'):
-            svg = chess.svg.board(board=game.board, coordinates=False, arrows=arrows)
+            flipped = game.side == 0
+            svg = chess.svg.board(board=game.board, coordinates=False, arrows=arrows, flipped=flipped)
             await ws.send(serialize_message('board', svg))
 
         if config.getboolean('gui', 'use_voice') and not game.last_move['history']:
