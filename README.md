@@ -8,6 +8,8 @@ The basic operation of this bot is very simple:
 3. The engine calculates the best moves
 4. The data from engine is outputted to the user and sent back to the client
 
+https://i.imgur.com/s8wy9a0.png
+
 ### Caveats:
 
 To be able connect to a websocket, a site must not have restricted content security policy (CSP), specifically connect-src. Fortunately this can be bypassed by opening a new window, which does not have CSP, and communicating through `window` objects in javascript.
