@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"build:css": "postcss tailwind.css -o dist/tailwind.min.css",
+		"build:css": "postcss tailwind.css -o css/tailwind.min.css",
 		"serve": "http-server ./",
 		"server": "http-server ./",
 		"watch": "watch \"npm run build:css\" ./js"
