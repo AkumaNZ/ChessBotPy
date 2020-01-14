@@ -83,7 +83,7 @@ class GameObject():
         self.transport = None
         self.visible = True
         self.missed_moves = False
-        self.last_move = ''
+        self.last_move = {'history': False}
         self.side = config.getint('defaults', 'side')
         self.run = config.getint('defaults', 'run')
         self.arrows = defaultdict(list)
@@ -203,7 +203,10 @@ async def run_engine(uid, ws):
             limit.time = config.getfloat('gui', 'time')
 
         if config.getboolean('gui', 'log_engine'):
-            open(engine_config.get('engine', 'debug log file'), 'w').close()
+            try:
+                open(engine_config.get('engine', 'debug log file'), 'w').close()
+            except Exception as err:
+                pass
         # Look for opening moves from books
         found_book_move = False
         openings = []
