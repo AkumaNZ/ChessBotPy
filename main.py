@@ -9,6 +9,7 @@ import json
 import configparser
 import os
 from pathlib import Path
+from collections import defaultdict
 
 # Load configurations
 config = configparser.ConfigParser()
@@ -85,10 +86,11 @@ class GameObject():
         self.last_move = ''
         self.side = config.getint('defaults', 'side')
         self.run = config.getint('defaults', 'run')
+        self.arrows = defaultdict(list)
 
     def should_run(self):
-        if self.run != NONE and ((self.board.turn == self.side and self.run == ME) or
-                                 (self.board.turn != self.side and self.run == OPPONENT) or self.run == BOTH):
+        if (self.run != NONE and not self.last_move['history'] and ((self.board.turn == self.side and self.run == ME) or
+                                                                    (self.board.turn != self.side and self.run == OPPONENT) or self.run == BOTH)):
             return True
         return False
 
@@ -105,62 +107,14 @@ digits = {
 }
 
 arrow_colors = {
-    # Black
-    0: {
-        # Red
-        0: [
-            'hsl(356, 75%, 53%, 1.0)', 'hsl(356, 75%, 53%, 0.85)', 'hsl(356, 75%, 53%, 0.6)', 'hsl(356, 75%, 53%, 0.45)',
-            'hsl(356, 75%, 53%, 0.3)', 'hsl(356, 75%, 53%, 0.3)', 'hsl(356, 75%, 53%, 0.055)', 'hsl(356, 75%, 53%, 0.05)'
-        ],
-        # Teal
-        1: [
-            'hsl(168, 78%, 41%, 1.0)', 'hsl(168, 78%, 41%, 0.85)', 'hsl(168, 78%, 41%, 0.6)', 'hsl(168, 78%, 41%, 0.45)',
-            'hsl(168, 78%, 41%, 0.3)', 'hsl(168, 78%, 41%, 0.3)', 'hsl(168, 78%, 41%, 0.055)', 'hsl(168, 78%, 41%, 0.05)'
-        ],
-        # Yellow
-        2: [
-            'hsl(42, 87%, 55%, 1.0)', 'hsl(42, 87%, 55%, 0.85)', 'hsl(42, 87%, 55%, 0.6)', 'hsl(42, 87%, 55%, 0.45)',
-            'hsl(42, 87%, 55%, 0.3)', 'hsl(42, 87%, 55%, 0.3)', 'hsl(42, 87%, 55%, 0.055)', 'hsl(42, 87%, 55%, 0.05)'
-        ],
-        # Magenta
-        3: [
-            'hsl(305, 80%, 49%, 1.0)', 'hsl(305, 80%, 49%, 0.85)', 'hsl(305, 80%, 49%, 0.6)', 'hsl(305, 80%, 49%, 0.45)',
-            'hsl(305, 80%, 49%, 0.3)', 'hsl(305, 80%, 49%, 0.3)', 'hsl(305, 80%, 49%, 0.055)', 'hsl(305, 80%, 49%, 0.05)'
-        ],
-        # Pink
-        4: [
-            'hsl(328, 85%, 46%, 1.0)', 'hsl(328, 85%, 46%, 0.85)', 'hsl(328, 85%, 46%, 0.6)', 'hsl(328, 85%, 46%, 0.45)',
-            'hsl(328, 85%, 46%, 0.3)', 'hsl(328, 85%, 46%, 0.3)', 'hsl(328, 85%, 46%, 0.055)', 'hsl(328, 85%, 46%, 0.05)'
-        ],
-    },
-    # White
-    1: {
-        # Green
-        0: [
-            'hsl(123, 57%, 45%, 1.0)', 'hsl(123, 57%, 45%, 0.85)', 'hsl(123, 57%, 45%, 0.6)', 'hsl(123, 57%, 45%, 0.45)',
-            'hsl(123, 57%, 45%, 0.3)', 'hsl(123, 57%, 45%, 0.3)', 'hsl(123, 57%, 45%, 0.055)', 'hsl(123, 57%, 45%, 0.05)'
-        ],
-        # Orange
-        1: [
-            'hsl(16, 94%, 61%, 1.0)', 'hsl(16, 94%, 61%, 0.85)', 'hsl(16, 94%, 61%, 0.6)', 'hsl(16, 94%, 61%, 0.45)',
-            'hsl(16, 94%, 61%, 0.3)', 'hsl(16, 94%, 61%, 0.3)', 'hsl(16, 94%, 61%, 0.055)', 'hsl(16, 94%, 61%, 0.05)'
-        ],
-        # Indigo
-        2: [
-            'hsl(224, 69%, 54%, 1.0)', 'hsl(224, 69%, 54%, 0.85)', 'hsl(224, 69%, 54%, 0.6)', 'hsl(224, 69%, 54%, 0.45)',
-            'hsl(224, 69%, 54%, 0.3)', 'hsl(224, 69%, 54%, 0.3)', 'hsl(224, 69%, 54%, 0.055)', 'hsl(224, 69%, 54%, 0.05)'
-        ],
-        # Lime Green
-        3: [
-            'hsl(90, 84%, 55%, 1.0)', 'hsl(90, 84%, 55%, 0.85)', 'hsl(90, 84%, 55%, 0.6)', 'hsl(90, 84%, 55%, 0.45)',
-            'hsl(90, 84%, 55%, 0.3)', 'hsl(90, 84%, 55%, 0.3)', 'hsl(90, 84%, 55%, 0.055)', 'hsl(90, 84%, 55%, 0.05)'
-        ],
-        # Blue
-        4: [
-            'hsl(197, 92%, 61%, 1.0)', 'hsl(197, 92%, 61%, 0.85)', 'hsl(197, 92%, 61%, 0.6)', 'hsl(197, 92%, 61%, 0.45)',
-            'hsl(197, 92%, 61%, 0.3)', 'hsl(197, 92%, 61%, 0.3)', 'hsl(197, 92%, 61%, 0.055)', 'hsl(197, 92%, 61%, 0.05)'
-        ],
-    },
+    chess.BLACK: [  # Red
+        'hsl(356, 75%, 53%, 1.00)', 'hsl(356, 75%, 53%, 0.80)', 'hsl(356, 75%, 53%, 0.06)', 'hsl(356, 75%, 53%, 0.40)', 'hsl(356, 75%, 53%, 0.20)',
+        'hsl(356, 75%, 53%, 0.05)'
+    ],
+    chess.WHITE: [  # Green
+        'hsl(123, 57%, 45%, 1.0)', 'hsl(123, 57%, 45%, 0.80)', 'hsl(123, 57%, 45%, 0.6)', 'hsl(123, 57%, 45%, 0.4)', 'hsl(123, 57%, 45%, 0.2)',
+        'hsl(123, 57%, 45%, 0.05)'
+    ],
 }
 
 
@@ -215,12 +169,18 @@ async def configure_engine(uid):
                 await engine.configure({key: value})
 
 
-def add_arrow(arrows, move, turn, pv, n):
-    if n > 7:
+def get_arrow(move, side, n):
+    if n > 5:
         color = "hsla(0, 0%, 0%, 0)"
     else:
-        color = arrow_colors[turn][pv][n]
-    arrows.append(chess.svg.Arrow(tail=move.from_square, head=move.to_square, color=color))
+        color = arrow_colors[side][n]
+    return chess.svg.Arrow(tail=move.from_square, head=move.to_square, color=color)
+
+
+async def draw_svg_board(game, ws, pv):
+    if config.getboolean('gui', 'draw_board'):
+        svg = chess.svg.board(board=game.board, coordinates=False, arrows=game.arrows[pv], flipped=game.side == 0)
+        await ws.send(serialize_message('board', svg))
 
 
 async def run_engine(uid, ws):
@@ -233,13 +193,14 @@ async def run_engine(uid, ws):
         await configure_engine(uid)
 
     if game.should_run():
-        arrows = []
+        # Reset old arrows when engine is about to run
+        game.arrows.clear()
         # print(game.board)
         limit: chess.engine.Limit = chess.engine.Limit()
         if config.getboolean('gui', 'use_depth'):
             limit.depth = config.getint('gui', 'depth')
         if config.getboolean('gui', 'use_time'):
-            limit.time = config.getint('gui', 'time')
+            limit.time = config.getfloat('gui', 'time')
 
         if config.getboolean('gui', 'log_engine'):
             open(engine_config.get('engine', 'debug log file'), 'w').close()
@@ -250,22 +211,22 @@ async def run_engine(uid, ws):
             book = config.get('gui', 'bookfile')
             if Path(book).is_file():
                 with chess.polyglot.open_reader(book) as reader:
-                    arrow_pv = 0
+                    arrow_pv = 1
                     for entry in reader.find_all(game.board):
                         found_book_move = True
                         openings.append(entry)
-                        add_arrow(arrows, entry.move, int(game.board.turn), arrow_pv, 0)
+                        game.arrows[arrow_pv].append(get_arrow(entry.move, game.board.turn, 0))
                         arrow_pv += 1
 
         if not found_book_move and config.has_option('gui', 'bookfile2'):
             book = config.get('gui', 'bookfile2')
             if Path(book).is_file():
-                arrow_pv = 0
+                arrow_pv = 1
                 with chess.polyglot.open_reader(book) as reader:
                     for entry in reader.find_all(game.board):
                         found_book_move = True
                         openings.append(entry)
-                        add_arrow(arrows, entry.move, int(game.board.turn), arrow_pv, 0)
+                        game.arrows[arrow_pv].append(get_arrow(entry.move, game.board.turn, 0))
                         arrow_pv += 1
 
         if not found_book_move:
@@ -290,7 +251,7 @@ async def run_engine(uid, ws):
                 pv = []
                 for move in multipv.pv:
                     san = game.board.san(move)
-                    add_arrow(arrows, move, int(game.board.turn), multipv.multipv - 1, move_counter // 2)
+                    game.arrows[multipv.multipv].append(get_arrow(move, game.board.turn, move_counter // 2))
                     pv.append(san)
                     game.board.push(move)
                     move_counter += 1
@@ -302,12 +263,9 @@ async def run_engine(uid, ws):
             await ws.send(serialize_message("multipv", multipv_data))
         print('Best move:', best_move)
 
-        if config.getboolean('gui', 'draw_board'):
-            flipped = game.side == 0
-            svg = chess.svg.board(board=game.board, coordinates=False, arrows=arrows, flipped=flipped)
-            await ws.send(serialize_message('board', svg))
+        await draw_svg_board(game, ws, 1)
 
-        if config.getboolean('gui', 'use_voice') and not game.last_move['history']:
+        if config.getboolean('gui', 'use_voice'):
             tts = parse_speech(best_move)
             # print(tts)
             speech.stop()
@@ -325,6 +283,7 @@ async def update_settings(data, uid, ws):
         if key == 'side':
             game.side = int(value)
             print('Playing as', value)
+            await run_engine(uid, ws)
         elif key == 'run':
             game.run = value
             if value == NONE:
@@ -343,7 +302,7 @@ async def update_settings(data, uid, ws):
                         await ws.send(serialize_message('error', 'Engine path: ' + err.strerror))
                         return
                     await configure_engine(uid)
-                    await run_engine(uid, ws)
+                await run_engine(uid, ws)
     # Set gui settings and save to file
     else:
         config['gui'][key] = str(value)
@@ -352,6 +311,7 @@ async def update_settings(data, uid, ws):
         # Re-initialize engine settings file, if engine path was changed.
         if key == 'engine_path':
             initialize_engine_settings_file()
+        await run_engine(uid, ws)
 
 
 async def update_engine_settings(data, uid, ws):
@@ -410,12 +370,17 @@ async def handle_message(message, uid, ws):
     # Run new moves
     elif data['type'] == 'move':
         await new_move(game, data['data'], uid, ws)
-    elif data['type'] == 'setting' or data['type'] == 'engine_setting':
-        pass  # Settings are handled earlier
+    # Clean Hash
     elif data['type'] == 'clear_hash':
         if game.engine is not None:
-            await game.engine.configure({"Clear Hash": True})
             print("Clearing hash...")
+            await game.engine.configure({"Clear Hash": True})
+    # Draw board with given PV
+    elif data['type'] == 'draw_svg':
+        print("Drawing board for PV", data['data'])
+        await draw_svg_board(game, ws, data['data'])
+    elif data['type'] == 'setting' or data['type'] == 'engine_setting':
+        pass  # Settings are handled earlier
     else:
         if 'type' in data:
             print('Unknown type', data['type'])
@@ -444,7 +409,7 @@ async def send_defaults(ws):
     await ws.send(serialize_message('setting', {'key': 'depth', 'value': config.getint('gui', 'depth')}))
     await ws.send(serialize_message('setting', {'key': 'multipv', 'value': config.getint('gui', 'multipv')}))
     await ws.send(serialize_message('setting', {'key': 'useTime', 'value': config.getboolean('gui', 'use_time')}))
-    await ws.send(serialize_message('setting', {'key': 'time', 'value': config.getint('gui', 'time')}))
+    await ws.send(serialize_message('setting', {'key': 'time', 'value': config.getfloat('gui', 'time')}))
     await ws.send(serialize_message('setting', {'key': 'book1', 'value': config.get('gui', 'bookfile')}))
     await ws.send(serialize_message('setting', {'key': 'book2', 'value': config.get('gui', 'bookfile2')}))
     await ws.send(serialize_message('setting', {'key': 'logEngine', 'value': config.getboolean('gui', 'log_engine')}))

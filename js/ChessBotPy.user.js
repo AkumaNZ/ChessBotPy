@@ -342,7 +342,7 @@ const main = async () => {
 						<span class="ml-2">Time {{ time }}</span>
 					</label>
 					<input
-						type="range" min="0" max="60" v-model.number="time" @change="handleSettingChange($event, 'time', 'int')"
+						type="range" min="0" max="60" step="0.1" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
 						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 					>
 				</div>
@@ -350,7 +350,7 @@ const main = async () => {
 				<div class="inline-flex flex-col mr-10 mb-4">
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Principal variations</span>
 					<label class="mb-2">
-						Multi PV {{ multipv }}
+						PV {{ multipv }}
 					</label>
 					<input
 						type="range" min="1" max="5" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
@@ -417,16 +417,29 @@ const main = async () => {
 
 			</div>
 
-			<div id="board" class="bg-gray-800 p-3" v-html="board">
+			<div id="board" class="bg-gray-800 p-3" v-html="board" v-if="drawBoard">
 			</div>
 
-			<div id="pvs" class="bg-gray-800 p-3">
-				<div v-for="line in pvs">
-					MultiPV: {{ line.multipv }}
-					Score: {{ line.score }}
-					<span v-for="mov in line.pv">
-						{{ mov }}
-					</span>
+			<div id="pvs" class="bg-gray-800 p-3 overflow-y-auto">
+				<div class="flex flex-row flex-wrap">
+					<div
+						v-for="(line, pv_index) in pvs"
+						@click="onSelectPV(pv_index + 1)"
+						class="w-32 mr-4 mb-3 p-2 border-2 border-gray-500 rounded hover:border-indigo-400"
+						:class="{ 'border-indigo-500': selectedPV == pv_index + 1 }"
+					>
+						<div class="text-gray-500 font-display font-bold text-xs uppercase tracking-wide mb-2">
+							PV {{ line.multipv }}
+							<span class="font-sans text-white text-sm ml-2">
+								{{ line.score }}
+							</span>
+						</div>
+						<div class="flex flex-row flex-wrap">
+							<div v-for="(mov, i) in line.pv" class="w-1/2">
+								<span :class="{ 'text-gray-400': i % 2 != 0 }">{{ mov }}</span>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 
@@ -511,7 +524,7 @@ const main = async () => {
 			height: 100vh;
 			padding: 2px;
 			grid-template-columns: 1fr;
-			grid-template-rows: 50vh 50vh 50vh 50vh 50vh;
+			grid-template-rows: 50vh 56vh 43vh 50vh 50vh;
 			grid-template-areas:
 				"main"
 				"board"
@@ -522,7 +535,7 @@ const main = async () => {
 
 		@media (min-width: 1024px) {
 			#layout {
-				grid-template-columns: 1fr 1fr;
+				grid-template-columns: 1fr;
 				grid-template-rows: 40vh 50vh 40vh;
 				grid-template-areas:
 					"main main"
@@ -533,11 +546,11 @@ const main = async () => {
 
 		@media (min-width: 1280px) {
 			#layout {
-				grid-template-columns: 11fr 7fr 6fr;
+				grid-template-columns: 1fr 1fr;
 				grid-template-rows: 1fr 1fr;
 				grid-template-areas:
-					"main pvs board"
-					"engine console console";
+					"main main board"
+					"engine console pvs";
 			}
 		}
 
@@ -647,7 +660,7 @@ const main = async () => {
 			useDepth: true,
 			depth: 8,
 			useTime: false,
-			time: 0,
+			time: 0.0,
 			consoleBottomedOut: true,
 			engineSettings: [],
 			drawBoard: true,
@@ -657,6 +670,7 @@ const main = async () => {
 			book2: '',
 			logEngine: '',
 			pvs: [],
+			selectedPV: 1,
 		},
 		methods: {
 			onConsoleScroll(event) {
@@ -670,6 +684,8 @@ const main = async () => {
 					value = event.target.checked;
 				} else if (type == 'int') {
 					value = parseInt(value);
+				} else if (type == 'float') {
+					value = parseFloat(value);
 				} else if (type == 'path') {
 					value = value.replace(/\\/g, '/');
 				}
@@ -685,6 +701,11 @@ const main = async () => {
 					log('Clearing hash...');
 					ws.send(JSON.stringify({ type: 'clear_hash', data: true }));
 				}
+			},
+			onSelectPV(pv) {
+				log('Changing PV to', pv);
+				this.selectedPV = pv;
+				ws.send(JSON.stringify({ type: 'draw_svg', data: pv }));
 			},
 		},
 	});
