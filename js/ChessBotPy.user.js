@@ -290,8 +290,8 @@ const main = async () => {
 
 	@media (min-width: 1280px) {
 		#layout {
-			grid-template-columns: 1fr 1fr;
-			grid-template-rows: 1fr 1fr;
+			grid-template-columns: 10fr 10fr 13fr;
+			grid-template-rows: 12fr 10fr;
 			grid-template-areas:
 				"main main board"
 				"engine console pvs";
@@ -489,7 +489,7 @@ const main = async () => {
 						PV {{ multipv }}
 					</label>
 					<input
-						type="range" min="1" max="5" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
+						type="range" min="1" max="10" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
 						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 					>
 				</div>

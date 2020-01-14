@@ -89,8 +89,8 @@ class GameObject():
         self.arrows = defaultdict(list)
 
     def should_run(self):
-        if (self.run != NONE and not self.last_move['history'] and ((self.board.turn == self.side and self.run == ME) or
-                                                                    (self.board.turn != self.side and self.run == OPPONENT) or self.run == BOTH)):
+        if (self.run != NONE and not self.board.is_game_over() and not self.last_move['history'] and
+            ((self.board.turn == self.side and self.run == ME) or (self.board.turn != self.side and self.run == OPPONENT) or self.run == BOTH)):
             return True
         return False
 
@@ -260,7 +260,10 @@ async def run_engine(uid, ws):
                     move_counter += 1
                 for i in range(move_counter):
                     game.board.pop()
-                score = multipv.score.relative.cp
+                if multipv.score.is_mate():
+                    score = '#' + str(multipv.score.relative.moves)
+                else:
+                    score = multipv.score.relative.cp
                 unit = {'multipv': multipv.multipv, "pv": pv, "score": score}
                 multipv_data.append(unit)
             await ws.send(serialize_message("multipv", multipv_data))
