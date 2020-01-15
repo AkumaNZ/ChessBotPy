@@ -133,3 +133,8 @@ dmypy.json
 
 # Fucking NPM
 /node_modules
+
+# Build stuff
+dist.7z
+dist.zip
+dist.rar
