@@ -262,7 +262,7 @@ async def handle_message(message, uid, ws):
     elif data['type'] == 'draw_svg':
         print("Drawing board for PV", data['data'])
         # FIX ME! Should we only draw/send board if the setting is enabled?
-        svg = await drawing.draw_svg_board(game, data['data'])
+        svg = drawing.draw_svg_board(game, data['data'])
         await ws.send(serialize_message('board', svg))
     elif data['type'] == 'setting' or data['type'] == 'engine_setting':
         pass  # Settings are handled earlier

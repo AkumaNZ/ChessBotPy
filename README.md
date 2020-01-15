@@ -25,6 +25,8 @@ To be able connect to a websocket, a site must not have restricted content secur
 -   Support for Chess.com
 -   Support for Chess24.com
 -   User set volume and pitch of TTS
+-   Make WS address a setting
+    -   Command line argument in python?
 
 ## Build
 

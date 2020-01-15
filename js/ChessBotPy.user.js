@@ -3,6 +3,7 @@
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
 // @grant       none
+// @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
 // @version     1.8
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
@@ -216,17 +217,6 @@ const waitForElement = async (selector, timeout) => {
 	return null;
 };
 
-const loadScript = url => {
-	return new Promise((resolve, reject) => {
-		const scriptElement = document.createElement('script');
-		scriptElement.src = url;
-		scriptElement.onload = event => resolve(event);
-		scriptElement.onerror = err => reject(err);
-		const head = document.querySelector('head');
-		head.appendChild(scriptElement);
-	});
-};
-
 const loadCSS = url => {
 	return new Promise((resolve, reject) => {
 		const linkElement = document.createElement('link');
@@ -260,7 +250,6 @@ const main = async () => {
 	await loadCSS(
 		'https://fonts.googleapis.com/css?family=Nunito:300,300i,400,400i,600,600i,700,700i|Open+Sans:300,300i,400,400i,600,600i,700,700i&display=swap'
 	);
-	await loadScript('https://cdn.jsdelivr.net/npm/vue/dist/vue.js');
 	const styleString = `
 	#layout {
 		display: grid;
