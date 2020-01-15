@@ -269,7 +269,7 @@ const main = async () => {
 	@media (min-width: 1024px) {
 		#layout {
 			grid-template-columns: 1fr;
-			grid-template-rows: 40vh 50vh 40vh;
+			grid-template-rows: 40vh 60vh 50vh;
 			grid-template-areas:
 				"main main"
 				"pvs board"
@@ -295,12 +295,16 @@ const main = async () => {
 		grid-area: board;
 	}
 
-	#board > svg {
+	#board svg {
 		height: 100%;
 	}
 
-	#board > svg line, #board > svg polygon {
-		opacity: 100%
+	#board svg line, #board svg polygon {
+		opacity: 100%;
+	}
+
+	#board-container {
+		height: 56vh;
 	}
 
 	#settings {
@@ -542,7 +546,8 @@ const main = async () => {
 
 			</div>
 
-			<div id="board" class="bg-gray-800 p-3" v-html="board" v-if="drawBoard">
+			<div id="board" class="bg-gray-800 p-3" >
+				<div id="board-container" v-html="board" v-if="drawBoard"></div>
 			</div>
 
 			<div id="pvs" class="bg-gray-800 p-3 overflow-y-auto">
