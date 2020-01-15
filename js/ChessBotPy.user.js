@@ -544,7 +544,7 @@ const main = async () => {
 					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engline log</span>
 					<label class="checkbox inline-flex cursor-pointer relative mb-2">
 						<input
-							type="checkbox" v-model="logEngine" @change="handleSettingChange($event, 'log_engine', 'checkbox')"
+							type="checkbox" v-model="logEngine" @change="handleSettingChange($event, 'clear_log', 'checkbox')"
 							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 						>
 						<span class="ml-2" title="Clear log each time before engine is ran">Clear log</span>

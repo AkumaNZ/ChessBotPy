@@ -21,19 +21,19 @@ def initialize_engine_settings_file():
     engine_config.clear()
     dummy = None
     if not config.has_option('gui', 'engine_path'):
-        print('Settings.ini is missing engine path. Pls fix and try again.')
+        print('Settings.ini is missing engine path. Please fix and try again.')
         return
 
     engine_file = Path(config.get('gui', 'engine_path'))
     if not engine_file.is_file():
-        print('Given engine path is not valid. Pls fix and try again')
+        print('Given engine path is not valid. Please fix and try again')
         return
 
     try:
         dummy = chess.engine.SimpleEngine.popen_uci(config.get('gui', 'engine_path'))
     except Exception as err:
         print(err)
-        print('Could not open engine. Pls fix and try again')
+        print('Could not open engine. Please fix and try again')
         return
 
     base = os.path.basename(config.get('gui', 'engine_path'))
@@ -80,19 +80,24 @@ class GameObject():
     def __init__(self, board):
         self.board: chess.Board = board
         self.engine: chess.engine.EngineProtocol = None
-        self.transport = None
+        self.transport: asyncio.transports.SubprocessTransport = None
         self.visible = True
         self.missed_moves = False
-        self.last_move = {'history': False}
+        self.live = False
         self.side = config.getint('defaults', 'side')
         self.run = config.getint('defaults', 'run')
         self.arrows = defaultdict(list)
 
     def should_run(self):
-        if (self.run != NONE and not self.board.is_game_over() and not self.last_move['history'] and
-            ((self.board.turn == self.side and self.run == ME) or (self.board.turn != self.side and self.run == OPPONENT) or self.run == BOTH)):
-            return True
-        return False
+        if self.run == NONE:
+            return False
+        if self.board.is_game_over():
+            return False
+        if not self.live:
+            return False
+        if self.run != BOTH and self.board.turn != self.side:
+            return False
+        return True
 
 
 digits = {
@@ -181,6 +186,21 @@ async def draw_svg_board(game, ws, pv):
         await ws.send(serialize_message('board', svg))
 
 
+def read_book(book, opening_moves, game):
+    found_opening = False
+    if Path(book).is_file():
+        with chess.polyglot.open_reader(book) as reader:
+            arrow_pv = 1
+            for entry in reader.find_all(game.board):
+                found_opening = True
+                opening_moves.append(entry)
+                game.arrows[arrow_pv].append(get_arrow(entry.move, game.board.turn, 0))
+                arrow_pv += 1
+    else:
+        print(book, "is not a valid book.")
+    return found_opening
+
+
 async def run_engine(uid, ws):
     game: GameObject = games[uid]
     if game.engine is None:
@@ -200,37 +220,29 @@ async def run_engine(uid, ws):
         if config.getboolean('gui', 'use_time'):
             limit.time = config.getfloat('gui', 'time')
 
-        if config.getboolean('gui', 'log_engine'):
+        if config.getboolean('gui', 'clear_log'):
             try:
                 open(engine_config.get('engine', 'debug log file'), 'w').close()
             except Exception:
                 pass
         # Look for opening moves from books
         found_book_move = False
-        openings = []
+        opening_moves = []
         if config.has_option('gui', 'bookfile'):
             book = config.get('gui', 'bookfile')
-            if Path(book).is_file():
-                with chess.polyglot.open_reader(book) as reader:
-                    arrow_pv = 1
-                    for entry in reader.find_all(game.board):
-                        found_book_move = True
-                        openings.append(entry)
-                        game.arrows[arrow_pv].append(get_arrow(entry.move, game.board.turn, 0))
-                        arrow_pv += 1
+            found_book_move = read_book(book, opening_moves, game)
 
         if not found_book_move and config.has_option('gui', 'bookfile2'):
             book = config.get('gui', 'bookfile2')
             if Path(book).is_file():
-                arrow_pv = 1
-                with chess.polyglot.open_reader(book) as reader:
-                    for entry in reader.find_all(game.board):
-                        found_book_move = True
-                        openings.append(entry)
-                        game.arrows[arrow_pv].append(get_arrow(entry.move, game.board.turn, 0))
-                        arrow_pv += 1
+                found_book_move = read_book(book, opening_moves, game)
 
-        if not found_book_move:
+        if found_book_move:
+            best_move = game.board.san(opening_moves[0].move)
+            opening_moves = [{"multipv": i, "pv": [game.board.san(x.move)], "score": x.weight} for i, x in enumerate(opening_moves)]
+            await ws.send(serialize_message("multipv", opening_moves))
+        else:
+            # If there no opening moves were found, use engine to analyse instead
             multipv = config.getint('gui', 'multipv')
             results = await game.engine.analyse(
                 board=game.board,
@@ -239,12 +251,6 @@ async def run_engine(uid, ws):
                 game=uid,
                 info=chess.engine.INFO_ALL,
             )
-
-        if found_book_move:
-            best_move = game.board.san(openings[0].move)
-            opening_moves = [{"multipv": i, "pv": [game.board.san(x.move)], "score": x.weight} for i, x in enumerate(openings)]
-            await ws.send(serialize_message("multipv", opening_moves))
-        else:
             best_move = game.board.san(results[0].pv[0])
             multipv_data = []
             for multipv in results:
@@ -283,39 +289,19 @@ async def update_settings(data, uid, ws):
     key = data['key']
     value = data['value']
     if config.has_option('defaults', key):
-        # config['defaults'][key] = value # Do not save defaults to file
-        if key == 'side':
-            game.side = int(value)
-            print('Playing as', value)
-            await run_engine(uid, ws)
-        elif key == 'run':
-            game.run = value
-            if value == NONE:
-                if game.engine is not None:
-                    print('Paused. Closing engine...')
-                    await game.engine.quit()
-                    game.engine = None
-                    game.transport = None
-            else:
-                print('Running engine for', value)
-                if game.engine is None:
-                    print('Launching engine.')
-                    try:
-                        game.transport, game.engine = await chess.engine.popen_uci(config['gui']['engine_path'])
-                    except FileNotFoundError as err:
-                        await ws.send(serialize_message('error', 'Engine path: ' + err.strerror))
-                        return
-                    await configure_engine(uid)
-                await run_engine(uid, ws)
-    # Set gui settings and save to file
+        setattr(game, key, value)
+        if key == 'run' and value == NONE:
+            await close_engine()
+            return
     else:
+        # Set gui settings and save to file
         config['gui'][key] = str(value)
         with open('settings.ini', 'w') as config_file:
             config.write(config_file)
         # Re-initialize engine settings file, if engine path was changed.
         if key == 'engine_path':
             initialize_engine_settings_file()
-        await run_engine(uid, ws)
+    await run_engine(uid, ws)
 
 
 async def update_engine_settings(data, uid, ws):
@@ -327,6 +313,14 @@ async def update_engine_settings(data, uid, ws):
     engine_name = os.path.splitext(base)[0] + '.ini'
     with open(engine_name, 'w') as config_file:
         engine_config.write(config_file)
+
+
+async def close_engine(game):
+    if game.engine is not None:
+        print('Closing engine.')
+        await game.engine.quit()
+        game.engine = None
+        game.transport = None
 
 
 async def handle_message(message, uid, ws):
@@ -350,20 +344,8 @@ async def handle_message(message, uid, ws):
         game.visible = data['data']
         print(f'Game {uid} {"visible" if game.visible else "hidden"}')
         # Launch or close engine based on visibility
-        if game.visible:
-            if game.engine is None:
-                print('Launching engine.')
-                try:
-                    game.transport, game.engine = await chess.engine.popen_uci(config.get('gui', 'engine_path'))
-                except FileNotFoundError as err:
-                    await ws.send(serialize_message('error', 'Engine path: ' + err.strerror))
-                    return
-                await configure_engine(uid)
-        elif game.engine is not None:
-            print('Closing engine.')
-            await game.engine.quit()
-            game.engine = None
-            game.transport = None
+        if not game.visible:
+            await close_engine(game)
         # Run engine if there were any missed moves while game was not visible
         if game.visible and game.missed_moves:
             await run_engine(uid, ws)
@@ -385,17 +367,16 @@ async def handle_message(message, uid, ws):
         await draw_svg_board(game, ws, data['data'])
     elif data['type'] == 'setting' or data['type'] == 'engine_setting':
         pass  # Settings are handled earlier
+    elif 'type' in data:
+        print('Unknown type', data['type'])
     else:
-        if 'type' in data:
-            print('Unknown type', data['type'])
-        else:
-            print('Unknown message', data)
+        print('Unknown message', data)
 
 
 async def new_move(game, data, uid, ws):
     if 'move' in data:
         game.board.push_san(data['move'])
-        game.last_move = data
+        game.live = not data['history']
         if game.visible:
             await run_engine(uid, ws)
         else:
@@ -404,19 +385,24 @@ async def new_move(game, data, uid, ws):
 
 
 async def send_defaults(ws):
-    await ws.send(serialize_message('setting', {'key': 'enginePath', 'value': config.get('gui', 'engine_path')}))
-    await ws.send(serialize_message('setting', {'key': 'playingAs', 'value': config.getint('defaults', 'side')}))
-    await ws.send(serialize_message('setting', {'key': 'runEngineFor', 'value': config.getint('defaults', 'run')}))
-    await ws.send(serialize_message('setting', {'key': 'useVoice', 'value': config.getboolean('gui', 'use_voice')}))
-    await ws.send(serialize_message('setting', {'key': 'drawBoard', 'value': config.getboolean('gui', 'draw_board')}))
-    await ws.send(serialize_message('setting', {'key': 'useDepth', 'value': config.getboolean('gui', 'use_depth')}))
-    await ws.send(serialize_message('setting', {'key': 'depth', 'value': config.getint('gui', 'depth')}))
-    await ws.send(serialize_message('setting', {'key': 'multipv', 'value': config.getint('gui', 'multipv')}))
-    await ws.send(serialize_message('setting', {'key': 'useTime', 'value': config.getboolean('gui', 'use_time')}))
-    await ws.send(serialize_message('setting', {'key': 'time', 'value': config.getfloat('gui', 'time')}))
-    await ws.send(serialize_message('setting', {'key': 'book1', 'value': config.get('gui', 'bookfile')}))
-    await ws.send(serialize_message('setting', {'key': 'book2', 'value': config.get('gui', 'bookfile2')}))
-    await ws.send(serialize_message('setting', {'key': 'logEngine', 'value': config.getboolean('gui', 'log_engine')}))
+    try:
+        await ws.send(serialize_message('setting', {'key': 'enginePath', 'value': config.get('gui', 'engine_path')}))
+        await ws.send(serialize_message('setting', {'key': 'playingAs', 'value': config.getint('defaults', 'side')}))
+        await ws.send(serialize_message('setting', {'key': 'runEngineFor', 'value': config.getint('defaults', 'run')}))
+        await ws.send(serialize_message('setting', {'key': 'useVoice', 'value': config.getboolean('gui', 'use_voice')}))
+        await ws.send(serialize_message('setting', {'key': 'drawBoard', 'value': config.getboolean('gui', 'draw_board')}))
+        await ws.send(serialize_message('setting', {'key': 'useDepth', 'value': config.getboolean('gui', 'use_depth')}))
+        await ws.send(serialize_message('setting', {'key': 'depth', 'value': config.getint('gui', 'depth')}))
+        await ws.send(serialize_message('setting', {'key': 'multipv', 'value': config.getint('gui', 'multipv')}))
+        await ws.send(serialize_message('setting', {'key': 'useTime', 'value': config.getboolean('gui', 'use_time')}))
+        await ws.send(serialize_message('setting', {'key': 'time', 'value': config.getfloat('gui', 'time')}))
+        await ws.send(serialize_message('setting', {'key': 'book1', 'value': config.get('gui', 'bookfile')}))
+        await ws.send(serialize_message('setting', {'key': 'book2', 'value': config.get('gui', 'bookfile2')}))
+        await ws.send(serialize_message('setting', {'key': 'logEngine', 'value': config.getboolean('gui', 'clear_log')}))
+    except Exception as err:
+        print(err)
+        print("Failed to fetch and send settings from settings.ini. Please fix your settings.ini")
+        quit()
 
 
 async def send_engine_settings(ws, uid):
@@ -439,6 +425,13 @@ async def send_engine_settings(ws, uid):
     dummy.quit()
 
 
+async def cleanup(uid):
+    if uid in games:
+        if games[uid].engine is not None:
+            await games[uid].engine.quit()
+        del games[uid]
+
+
 async def connection_handler(websocket, path):
     try:
         print('Client connected', path)
@@ -456,22 +449,17 @@ async def connection_handler(websocket, path):
 
         print('Connection closed', path)
         # Clean up
-        if path in games:
-            if games[path].engine is not None:
-                await games[path].engine.quit()
-            del games[path]
+        await cleanup(path)
     except websockets.ConnectionClosed as err:
         print(err)
-        if path in games:
-            if games[path].engine is not None:
-                await games[path].engine.quit()
-            del games[path]
+        await cleanup(path)
 
 
 start_server = websockets.serve(connection_handler, '127.0.0.1', 5678)
 asyncio.get_event_loop().run_until_complete(start_server)
 print('Looking for connections...')
 asyncio.get_event_loop().run_forever()
+
 # Clean up
 speech.endLoop()
 for game in games:
