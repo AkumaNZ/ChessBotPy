@@ -19,8 +19,11 @@ To be able connect to a websocket, a site must not have restricted content secur
 -   Send engine data to client
     -   What to show in client log?
 -   Lichess: handle interrupts in analysis mode.
+    -   Get FEN directly from site
 -   Support for Chess.com
+    -   [...document.querySelectorAll('.vertical-move-list-column:not(.move-timestamps-component)')].map(x => x.innerText)
 -   Support for Chess24.com
+    -   [...document.querySelectorAll('.move')].map(x => x.innerText)
 -   User set volume and pitch of TTS
 -   Make WS address a setting
     -   Command line argument in python?

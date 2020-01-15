@@ -167,7 +167,11 @@ const findGame = async () => {
 	}
 
 	// Get the side you're plaing as
-	let turn = doc.querySelector('.rclock-turn__text').innerText.trim();
+	let turnElement = doc.querySelector('.rclock-turn__text');
+	let turn = '';
+	if (turnElement != null) {
+		turn = turnElement.innerText.trim();
+	}
 	let side = turn === 'Your turn' ? (white ? 1 : 0) : white ? 0 : 1;
 	app.playingAs = side;
 	log('Starting as', side == 0 ? 'black' : 'white');
