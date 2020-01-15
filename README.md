@@ -16,10 +16,7 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Todo
 
--   Refactor config stuff to seperate module
--   Refactor stuff into own functions
 -   Send engine data to client
-    -   Log best move?
     -   What to show in client log?
 -   Lichess: handle interrupts in analysis mode.
 -   Support for Chess.com
@@ -27,6 +24,7 @@ To be able connect to a websocket, a site must not have restricted content secur
 -   User set volume and pitch of TTS
 -   Make WS address a setting
     -   Command line argument in python?
+-   Write instructions
 
 ## Build
 

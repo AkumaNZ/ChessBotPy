@@ -257,7 +257,7 @@ const main = async () => {
 		height: 100vh;
 		padding: 2px;
 		grid-template-columns: 1fr;
-		grid-template-rows: 50vh 56vh 43vh 50vh 50vh;
+		grid-template-rows: 50vh 60vh 43vh 50vh 50vh;
 		grid-template-areas:
 			"main"
 			"board"
@@ -268,7 +268,7 @@ const main = async () => {
 
 	@media (min-width: 1024px) {
 		#layout {
-			grid-template-columns: 1fr;
+			grid-template-columns: 1fr 1fr;
 			grid-template-rows: 40vh 60vh 50vh;
 			grid-template-areas:
 				"main main"
@@ -297,6 +297,7 @@ const main = async () => {
 
 	#board svg {
 		height: 100%;
+		width: 100%;
 	}
 
 	#board svg line, #board svg polygon {
