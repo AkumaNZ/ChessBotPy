@@ -55,6 +55,7 @@ def update_settings(data, game, dummy):
         # Re-initialize engine settings file, if engine path was changed.
         if key == 'engine_path':
             initialize_engine_settings_file(dummy)
+    return True
 
 
 async def update_engine_settings(data):
