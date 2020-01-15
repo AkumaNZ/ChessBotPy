@@ -14,27 +14,17 @@ https://i.imgur.com/vOTvw9p.png
 
 To be able connect to a websocket, a site must not have restricted content security policy (CSP), specifically connect-src. Fortunately this can be bypassed by opening a new window, which does not have CSP, and communicating through `window` objects in javascript.
 
-## Known issues:
-
--   Lichess parser does not handle interrupts in analysis mode.
-
 ## Todo
 
--   User set volume and pitch of TTS
 -   Refactor config stuff to seperate module
 -   Refactor stuff into own functions
 -   Send engine data to client
-    -   FEN
--   Console
-    -   Add logs
-        -   Best move, etc
-    -   Log settings (User can choose what's logged)
--   Handle applying default settings in a better way
-    -   Changing setting never saves to file, but only when save button is clicked?
-    -   Refactor game object settings
-        -   Should we get our settings from there?
+    -   Log best move?
+    -   What to show in client log?
+-   Lichess: handle interrupts in analysis mode.
 -   Support for Chess.com
 -   Support for Chess24.com
+-   User set volume and pitch of TTS
 
 ## Build
 

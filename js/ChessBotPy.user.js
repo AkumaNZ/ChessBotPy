@@ -290,8 +290,8 @@ const main = async () => {
 
 	@media (min-width: 1280px) {
 		#layout {
-			grid-template-columns: 10fr 10fr 13fr;
-			grid-template-rows: 12fr 10fr;
+			grid-template-columns: 9fr 10fr 14fr;
+			grid-template-rows: 13fr 10fr;
 			grid-template-areas:
 				"main main board"
 				"engine console pvs";
@@ -746,6 +746,7 @@ const main = async () => {
 				break;
 			case 'multipv':
 				app.pvs = data.message;
+				app.selectedPV = 1;
 				break;
 			default:
 				log('Received unknown message type, see console for details');

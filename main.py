@@ -108,12 +108,10 @@ digits = {
 
 arrow_colors = {
     chess.BLACK: [  # Red
-        'hsl(356, 75%, 53%, 1.00)', 'hsl(356, 75%, 53%, 0.80)', 'hsl(356, 75%, 53%, 0.06)', 'hsl(356, 75%, 53%, 0.40)', 'hsl(356, 75%, 53%, 0.20)',
-        'hsl(356, 75%, 53%, 0.05)'
+        'hsl(356, 75%, 53%, 1)', 'hsl(356, 75%, 53%, 0.8)', 'hsl(356, 75%, 53%, 0.6)', 'hsl(356, 75%, 53%, 0.4)', 'hsl(356, 75%, 53%, 0.2)'
     ],
     chess.WHITE: [  # Green
-        'hsl(123, 57%, 45%, 1.0)', 'hsl(123, 57%, 45%, 0.80)', 'hsl(123, 57%, 45%, 0.6)', 'hsl(123, 57%, 45%, 0.4)', 'hsl(123, 57%, 45%, 0.2)',
-        'hsl(123, 57%, 45%, 0.05)'
+        'hsl(123, 57%, 45%, 1)', 'hsl(123, 57%, 45%, 0.8)', 'hsl(123, 57%, 45%, 0.6)', 'hsl(123, 57%, 45%, 0.4)', 'hsl(123, 57%, 45%, 0.2)'
     ],
 }
 
@@ -170,7 +168,7 @@ async def configure_engine(uid):
 
 
 def get_arrow(move, side, n):
-    if n > 5:
+    if n >= 5:
         color = "hsla(0, 0%, 0%, 0)"
     else:
         color = arrow_colors[side][n]
@@ -205,7 +203,7 @@ async def run_engine(uid, ws):
         if config.getboolean('gui', 'log_engine'):
             try:
                 open(engine_config.get('engine', 'debug log file'), 'w').close()
-            except Exception as err:
+            except Exception:
                 pass
         # Look for opening moves from books
         found_book_move = False
@@ -450,8 +448,12 @@ async def connection_handler(websocket, path):
         await send_engine_settings(websocket, path)
 
         async for message in websocket:
-            # print(message)
-            await handle_message(message, path, websocket)
+            try:
+                await handle_message(message, path, websocket)
+            except Exception as err:
+                print(err)
+                print("Something went wrong. Keep trying...")
+
         print('Connection closed', path)
         # Clean up
         if path in games:
