@@ -29,7 +29,7 @@ To be able connect to a websocket, a site must not have restricted content secur
 ## Build
 
 To build a single executable, run
-`pyinstaller.exe --hidden-import=pyttsx3.drivers --hidden-import=pyttsx3.drivers.sapi5 --onefile main.py`
+`pyinstaller.exe --hidden-import=pyttsx3.drivers --hidden-import=pyttsx3.drivers.sapi5 --onefile chessbotpy/main.py`
 
 To build a minified version of tailwind, run
 `npm run build:css` and in css/tailwind.min.css, replace all backslashes `\` with double backslashes `\\`
