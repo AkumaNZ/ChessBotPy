@@ -57,7 +57,7 @@ function findSideChessDotCom() {
 
 function findSideChess24() {
 	let side = WHITE;
-	let turnElement = doc.querySelector('.bottom .black');
+	let turnElement = doc.querySelector('.bottom .playerInfo.black');
 	if (turnElement != null) {
 		side = BLACK;
 	}
