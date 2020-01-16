@@ -27,20 +27,28 @@ if (host === 'www.chess.com') {
 	window.document.domain = 'chess.com';
 }
 
-function findSideLichess(moves) {
+function findSideLichess() {
+	let movesMade = [...doc.querySelectorAll(siteMap[host].sanTarget)].map(x => x.innerText.trim());
 	let turnElement = doc.querySelector('.rclock-turn__text');
 	let turn = '';
 	let side = WHITE;
 	if (turnElement != null) {
 		turn = turnElement.innerText.trim();
-		side = turn === 'Your turn' ? (moves.length % 2 == 0 ? WHITE : BLACK) : moves.length % 2 == 0 ? BLACK : WHITE;
+		side =
+			turn === 'Your turn'
+				? movesMade.length % 2 == 0
+					? WHITE
+					: BLACK
+				: movesMade.length % 2 == 0
+				? BLACK
+				: WHITE;
 	}
 	return side;
 }
 
 function findSideChessDotCom() {
-	let turnElement = doc.querySelector('.board-player-default-bottom.board-player-default-black');
 	let side = WHITE;
+	let turnElement = doc.querySelector('.board-player-default-bottom.board-player-default-black');
 	if (turnElement != null) {
 		side = BLACK;
 	}
@@ -49,6 +57,10 @@ function findSideChessDotCom() {
 
 function findSideChess24() {
 	let side = WHITE;
+	let turnElement = doc.querySelector('.bottom .black');
+	if (turnElement != null) {
+		side = BLACK;
+	}
 	return side;
 }
 
@@ -116,73 +128,43 @@ function log(...args) {
 	}
 }
 
-var observer = new MutationObserver(mutations => {
-	let fenput = doc.querySelector('.analyse__underboard__fen');
-	if (fenput != null) {
-		if (fenput.value != fen) {
-			fen = fenput.value;
-			log('Sending updated FEN.');
-			ws.send(JSON.stringify({ type: 'fen', data: fen }));
-		}
-		return;
-	}
-	for (let mutation of mutations) {
-		if (mutation.addedNodes.length) {
-			let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)]
-				.map(x => x.innerText.trim())
-				.filter(x => x != '');
-			if (moves.length != numOfMoves) {
-				numOfMoves = moves.length;
-				log('Sending updated moves.');
-				ws.send(JSON.stringify({ type: 'moves', data: moves }));
-			}
-		}
-	}
-});
-
-const findGame = async () => {
-	await waitForElement(siteMap[host].sanTarget, 1);
-	// Parse initial moves, before watching for mutations
-	let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)].map(x => x.innerText.trim());
-	if (moves.length) {
-		log('Sending initial moves.');
-		ws.send(JSON.stringify({ type: 'moves', data: moves }));
-	} else {
-		log('No initial moves.');
-	}
-
-	// Get the side you're plaing as
-	let side = siteMap[host].sideFinder(moves);
+function update_side() {
+	let side = siteMap[host].sideFinder();
 	app.playingAs = side;
 	log('Starting as', side == 0 ? 'black' : 'white');
 	ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: side } }));
+}
 
+const findGame = async () => {
+	await waitForElement(siteMap[host].sanTarget, 1);
+	// Get the side you're plaing as
+	update_side();
+	log('Starting loop');
 	while (true) {
-		await sleep(25);
-		let fenput = doc.querySelector('.analyse__underboard__fen');
-		if (fenput != null) {
-			if (fenput.value != fen) {
-				fen = fenput.value;
-				log('Sending updated FEN.');
-				ws.send(JSON.stringify({ type: 'fen', data: fen }));
-				continue;
+		await sleep(50);
+		if (host === 'lichess.org') {
+			let fenput = doc.querySelector('.analyse__underboard__fen');
+			if (fenput != null) {
+				if (fenput.value != fen) {
+					fen = fenput.value;
+					log('Sending updated FEN.');
+					ws.send(JSON.stringify({ type: 'fen', data: fen }));
+					continue;
+				}
 			}
 		}
 		let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)]
 			.map(x => x.innerText.trim())
 			.filter(x => x != '');
 		if (moves.length != numOfMoves) {
+			if (moves.length < 2) {
+				update_side();
+			}
 			numOfMoves = moves.length;
 			log('Sending updated moves.');
 			ws.send(JSON.stringify({ type: 'moves', data: moves }));
 		}
 	}
-	observer.observe(doc.querySelector(siteMap[host].observerTarget), {
-		attributes: true,
-		childList: true,
-		subtree: true,
-	});
-	log('Attached mutation observer');
 };
 
 const connect = url => {
@@ -212,14 +194,14 @@ const waitForElement = async (selector, timeout) => {
 
 const loadCSS = url => {
 	return new Promise((resolve, reject) => {
-		const linkElement = document.createElement('link');
+		const linkElement = doc.createElement('link');
 		linkElement.rel = 'stylesheet';
 		linkElement.type = 'text/css';
 		linkElement.href = url;
 		linkElement.media = 'all';
 		linkElement.onload = event => resolve(event);
 		linkElement.onerror = err => reject(err);
-		const head = document.querySelector('head');
+		const head = doc.querySelector('head');
 		head.appendChild(linkElement);
 	});
 };

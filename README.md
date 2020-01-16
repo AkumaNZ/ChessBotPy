@@ -16,8 +16,7 @@ To be able connect to a websocket, a site must not have restricted content secur
 
 ## Todo
 
--   Send engine data to client
-    -   What to show in client log?
+-   Show more moves ahead with openings
 -   User set volume and pitch of TTS
 -   Make WS address a setting
     -   Command line argument in python?

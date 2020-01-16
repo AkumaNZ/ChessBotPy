@@ -43,11 +43,7 @@ def update_settings(data, game, dummy):
     '''
     key = data['key']
     value = data['value']
-    if config.has_option('defaults', key):
-        setattr(game, key, value)
-        if key == 'run' and value == 3:  # 3 = NONE
-            return False
-    else:
+    if config.has_option('gui', key):
         # Set gui settings and save to file
         config['gui'][key] = str(value)
         with open('settings.ini', 'w') as config_file:
@@ -55,6 +51,13 @@ def update_settings(data, game, dummy):
         # Re-initialize engine settings file, if engine path was changed.
         if key == 'engine_path':
             initialize_engine_settings_file(dummy)
+    else:
+        if getattr(game, key) != value:
+            setattr(game, key, value)
+            if key == 'run' and value == 3:  # 3 = NONE
+                return False
+        else:
+            return False
     return True
 
 
