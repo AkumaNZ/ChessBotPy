@@ -44,7 +44,10 @@ def parse_speech(move: str):
             sentence += digits[letter]
         else:
             if letter == 'a':
-                sentence += 'aa '
+                if sentence == '':
+                    sentence += 'AA '
+                else:
+                    sentence += 'A '
             else:
                 sentence += f'{letter} '
         if castles_count == 3 and len(move) < 5:

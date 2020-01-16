@@ -2,12 +2,75 @@
 // @name        ChessBotPy
 // @namespace   ChessBotPy
 // @match       *://lichess.org/*
+// @match       *://www.chess.com/*
+// @match       *://chess24.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
-// @version     1.8
+// @version     2.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
+
+// Global state
+let numOfMoves = 0;
+let fen = '';
+let uid = uuidv4();
+let ws = null;
+let app = null;
+let popup = null;
+let host = window.location.host;
+let origin = window.location.origin;
+const WHITE = 1;
+const BLACK = 0;
+
+if (host === 'www.chess.com') {
+	window.document.domain = 'chess.com';
+}
+
+function findSideLichess(moves) {
+	let turnElement = doc.querySelector('.rclock-turn__text');
+	let turn = '';
+	let side = WHITE;
+	if (turnElement != null) {
+		turn = turnElement.innerText.trim();
+		side = turn === 'Your turn' ? (moves.length % 2 == 0 ? WHITE : BLACK) : moves.length % 2 == 0 ? BLACK : WHITE;
+	}
+	return side;
+}
+
+function findSideChessDotCom() {
+	let turnElement = doc.querySelector('.board-player-default-bottom.board-player-default-black');
+	let side = WHITE;
+	if (turnElement != null) {
+		side = BLACK;
+	}
+	return side;
+}
+
+function findSideChess24() {
+	let side = WHITE;
+	return side;
+}
+
+let siteMap = {
+	'lichess.org': {
+		observerTarget: '.rmoves, .tview2',
+		sanTarget: 'm2, move',
+		sideFinder: findSideLichess,
+	},
+	'www.chess.com': {
+		observerTarget:
+			'.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
+		sanTarget: '.move-text-component, .gotomove, .move-list-controls-move',
+		sideFinder: findSideChessDotCom,
+	},
+
+	'chess24.com': {
+		observerTarget: '.Moves',
+		sanTarget: '.move',
+		sideFinder: findSideChess24,
+	},
+};
 
 // A new window is opened to allow a websocket connection, since the main page has a restricted CSP
 // this is just an alias to the document object of the main window
@@ -15,15 +78,6 @@ let doc = window.document;
 if (window.opener != null) {
 	doc = window.opener.document;
 }
-// asd
-// Global state
-let index = 0;
-let white = true;
-let move = '';
-let activeTarget = '';
-let uid = uuidv4();
-let ws = null;
-let app = null;
 
 function uuidv4() {
 	return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
@@ -63,137 +117,72 @@ function log(...args) {
 }
 
 var observer = new MutationObserver(mutations => {
-	attributeChanges = mutations.filter(x => x.type === 'attributes' && x.attributeName === 'class');
-	if (attributeChanges.length > 0) {
-		activeChanges = attributeChanges.filter(
-			x => (x.target.nodeName === 'MOVE' || x.target.nodeName === 'M2') && x.target.classList.contains('active')
-		);
-		if (activeChanges.length == 0 && activeTarget != 'starting-position') {
-			log(`Changed active target to: Starting position`);
-			activeTarget = `starting-position`;
+	let fenput = doc.querySelector('.analyse__underboard__fen');
+	if (fenput != null) {
+		if (fenput.value != fen) {
+			fen = fenput.value;
+			log('Sending updated FEN.');
+			ws.send(JSON.stringify({ type: 'fen', data: fen }));
 		}
+		return;
 	}
 	for (let mutation of mutations) {
-		// Process new nodes
 		if (mutation.addedNodes.length) {
-			for (node of mutation.addedNodes) {
-				parsed = parseMove(node, false);
-				if (parsed != null) {
-					ws.send(JSON.stringify(parsed));
-				}
+			let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)]
+				.map(x => x.innerText.trim())
+				.filter(x => x != '');
+			if (moves.length != numOfMoves) {
+				numOfMoves = moves.length;
+				log('Sending updated moves.');
+				ws.send(JSON.stringify({ type: 'moves', data: moves }));
 			}
-		}
-		// Process 'active' change
-		else if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-			parseActiveStateChange(mutation.target);
 		}
 	}
 });
 
-function parseMove(node, history) {
-	// First move (initializing div.moves)
-	if (node.nodeName === 'DIV' && node.classList.contains('moves')) {
-		index = parseInt(node.firstChild.firstChild.textContent);
-		move = node.lastChild.firstChild.textContent;
-		newMove = { type: 'move', data: { index, white, move, history } };
-		log(`${index}.${white ? '  ' : '..'} ${move}`);
-		white = !white;
-		return newMove;
-	}
-	// New turn
-	else if (node.nodeName === 'INDEX') {
-		index = parseInt(node.firstChild.textContent);
-	}
-	// New move
-	else if (node.nodeName === 'MOVE' || node.nodeName === 'M2') {
-		move = node.firstChild.textContent;
-		newMove = { type: 'move', data: { index, white, move, history } };
-		log(`${index}.${white ? '  ' : '..'} ${move}`);
-		white = !white;
-		return newMove;
-	}
-	// Result (game ended)
-	else if (node.classList.contains('result-wrap')) {
-		log('Game ended!');
-		return { type: 'result', data: 'ended' };
-	}
-}
-
-function parseActiveStateChange(node) {
-	if ((node.nodeName === 'MOVE' || node.nodeName === 'M2') && node.classList.contains('active')) {
-		let index = 0;
-		let move = node.firstChild.textContent;
-		let white = true;
-		if (node.previousSibling.nodeName === 'INDEX') {
-			index = parseInt(node.previousSibling.firstChild.textContent);
-		} else if (node.previousSibling.previousSibling.nodeName === 'INDEX') {
-			index = parseInt(node.previousSibling.previousSibling.firstChild.textContent);
-			white = false;
-		}
-		if (`${index}-${white}-${move}` != activeTarget) {
-			activeTarget = `${index}-${white}-${move}`;
-			log(`Changed active target to: ${index} ${white ? 'white' : 'black'} ${move}`);
-			return { type: 'history', data: { index, white, move } };
-		}
-	}
-}
-
 const findGame = async () => {
+	await waitForElement(siteMap[host].sanTarget, 1);
 	// Parse initial moves, before watching for mutations
-	log('Waiting for game to start...');
-	await Promise.race([waitForElement('m2', 2), waitForElement('move', 2)]);
-	let nodes = doc.querySelector('.moves'); // Live game
-	if (nodes == null) {
-		nodes = doc.querySelector('.tview2'); // Analysis view
-	}
-
-	if (nodes != null) {
-		log('Parsing initial moves');
-		initialMoves = [];
-		// Get last item and don't mark it as history
-		for (let node of nodes.children) {
-			parsed = parseMove(node, true);
-			if (parsed != null) {
-				initialMoves.push(parsed);
-			}
-		}
-		if (initialMoves.length > 0) {
-			// Set last move as not history
-			initialMoves[initialMoves.length - 1].data.history = false;
-			ws.send(JSON.stringify({ type: 'initial', data: initialMoves }));
-		}
+	let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)].map(x => x.innerText.trim());
+	if (moves.length) {
+		log('Sending initial moves.');
+		ws.send(JSON.stringify({ type: 'moves', data: moves }));
 	} else {
-		log('No intial moves to parse...');
+		log('No initial moves.');
 	}
 
 	// Get the side you're plaing as
-	let turnElement = doc.querySelector('.rclock-turn__text');
-	let turn = '';
-	if (turnElement != null) {
-		turn = turnElement.innerText.trim();
-	}
-	let side = turn === 'Your turn' ? (white ? 1 : 0) : white ? 0 : 1;
+	let side = siteMap[host].sideFinder(moves);
 	app.playingAs = side;
 	log('Starting as', side == 0 ? 'black' : 'white');
 	ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: side } }));
 
-	if (doc.querySelector('.rmoves') != null) {
-		observer.observe(doc.querySelector('.rmoves'), {
-			attributes: true,
-			childList: true,
-			subtree: true,
-		});
-		log('Attached mutation observer on ".rmoves"');
-	} else if (doc.querySelector('.tview2') != null) {
-		observer.observe(doc.querySelector('.tview2'), {
-			attributes: true,
-			childList: true,
-			subtree: true,
-		});
-		log('Attached mutation observer on ".tview2"');
-	} else {
-		log('No target found for mutation observer to attach to');
+	while (true) {
+		await sleep(25);
+		let fenput = doc.querySelector('.analyse__underboard__fen');
+		if (fenput != null) {
+			if (fenput.value != fen) {
+				fen = fenput.value;
+				log('Sending updated FEN.');
+				ws.send(JSON.stringify({ type: 'fen', data: fen }));
+				continue;
+			}
+		}
+		let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)]
+			.map(x => x.innerText.trim())
+			.filter(x => x != '');
+		if (moves.length != numOfMoves) {
+			numOfMoves = moves.length;
+			log('Sending updated moves.');
+			ws.send(JSON.stringify({ type: 'moves', data: moves }));
+		}
 	}
+	observer.observe(doc.querySelector(siteMap[host].observerTarget), {
+		attributes: true,
+		childList: true,
+		subtree: true,
+	});
+	log('Attached mutation observer');
 };
 
 const connect = url => {
@@ -236,13 +225,13 @@ const loadCSS = url => {
 };
 
 const main = async () => {
-	if (window.location.href != 'https://lichess.org/.bot') {
-		element = await Promise.race([waitForElement('.rmoves', 60), waitForElement('.tview2', 60)]);
+	if (window.location.href != `${origin}/.css`) {
+		let element = await waitForElement(siteMap[host].observerTarget, 60);
 		if (element == null) {
 			return;
 		}
-		popup = window.open('https://lichess.org/.bot', '_blank');
-		window.addEventListener('beforeunload', function(event) {
+		popup = window.open(`${origin}/.css`, '_blank');
+		window.addEventListener('beforeunload', function() {
 			popup.close();
 		});
 		window.focus(); // Return back to main window (on FF at least)
@@ -251,9 +240,7 @@ const main = async () => {
 	window.document.title = `Client: ${window.opener.location.pathname}`;
 
 	// await loadCSS('http://127.0.0.1:8080/dist/tailwind.css');
-	await loadCSS(
-		'https://fonts.googleapis.com/css?family=Nunito:300,300i,400,400i,600,600i,700,700i|Open+Sans:300,300i,400,400i,600,600i,700,700i&display=swap'
-	);
+	await loadCSS('https://fonts.googleapis.com/css?family=Nunito:400,700|Open+Sans:400,700&display=swap');
 	const styleString = `
 	#layout {
 		display: grid;
@@ -679,7 +666,7 @@ const main = async () => {
 			onConsoleScroll(event) {
 				const top = Math.round(event.target.scrollTop);
 				const offset = event.target.scrollHeight - event.target.offsetHeight;
-				this.consoleBottomedOut = top === offset;
+				this.consoleBottomedOut = Math.abs(top - offset) < 2;
 			},
 			handleSettingChange(event, key, type) {
 				let value = event.target.value;

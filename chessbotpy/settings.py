@@ -74,7 +74,6 @@ async def update_engine_settings(data):
 
 def get_mapped_settings():
     yield {'key': 'enginePath', 'value': config.get('gui', 'engine_path')}
-    yield {'key': 'playingAs', 'value': config.getint('defaults', 'side')}
     yield {'key': 'runEngineFor', 'value': config.getint('defaults', 'run')}
     yield {'key': 'useVoice', 'value': config.getboolean('gui', 'use_voice')}
     yield {'key': 'drawBoard', 'value': config.getboolean('gui', 'draw_board')}

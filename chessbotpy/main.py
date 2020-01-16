@@ -42,8 +42,7 @@ class GameObject():
         self.transport: asyncio.transports.SubprocessTransport = None
         self.visible = True
         self.missed_moves = False
-        self.live = False
-        self.side = settings.config.getint('defaults', 'side')
+        self.side = WHITE
         self.run = settings.config.getint('defaults', 'run')
         self.arrows = defaultdict(list)
 
@@ -51,8 +50,6 @@ class GameObject():
         if self.run == NONE:
             return False
         if self.board.is_game_over():
-            return False
-        if not self.live:
             return False
         if self.run != BOTH and self.board.turn != self.side:
             return False
@@ -63,13 +60,9 @@ def read_book(book, opening_moves, game):
     found_opening = False
     if Path(book).is_file():
         with chess.polyglot.open_reader(book) as reader:
-            arrow_pv = 1
             for entry in reader.find_all(game.board):
                 found_opening = True
                 opening_moves.append(entry)
-                arrow = drawing.get_arrow(entry.move, game.board.turn, 0)
-                game.arrows[arrow_pv].append(arrow)
-                arrow_pv += 1
     else:
         print(book, "is not a valid book.")
     return found_opening
@@ -129,8 +122,14 @@ async def run_engine(uid, ws):
                 found_book_move = read_book(book, opening_moves, game)
 
         if found_book_move:
+            opening_moves = sorted(opening_moves, key=lambda x: x.weight, reverse=True)
             best_move = game.board.san(opening_moves[0].move)
-            opening_moves = [{"multipv": i, "pv": [game.board.san(x.move)], "score": x.weight} for i, x in enumerate(opening_moves)]
+            arrow_pv = 1
+            for entry in opening_moves:
+                arrow = drawing.get_arrow(entry.move, game.board.turn, 0)
+                game.arrows[arrow_pv].append(arrow)
+                arrow_pv += 1
+            opening_moves = [{"multipv": i + 1, "pv": [game.board.san(x.move)], "score": x.weight} for i, x in enumerate(opening_moves)]
             await ws.send(serialize_message("multipv", opening_moves))
         else:
             # If there no opening moves were found, use engine to analyse instead
@@ -174,15 +173,23 @@ async def run_engine(uid, ws):
         game.missed_moves = False
 
 
-async def new_move(game, data, uid, ws):
-    if 'move' in data:
-        game.board.push_san(data['move'])
-        game.live = not data['history']
-        if game.visible:
-            await run_engine(uid, ws)
-        else:
-            print('Missed a move on:', uid)
-            game.missed_moves = True
+async def update_board(game, data, uid, ws, fen):
+    game.board.reset()
+    if fen:
+        game.board.set_fen(data)
+    else:
+        for move in data:
+            # if not game.board.is_game_over():
+            try:
+                game.board.push_san(move)
+            except ValueError as err:
+                print(err)
+
+    if game.visible:
+        await run_engine(uid, ws)
+    else:
+        print('Missed a move on:', uid)
+        game.missed_moves = True
 
 
 def serialize_message(target: str, message):
@@ -246,13 +253,11 @@ async def handle_message(message, uid, ws):
         # Run engine if there were any missed moves while game was not visible
         if game.visible and game.missed_moves:
             await run_engine(uid, ws)
-    # Run initial moves
-    elif data['type'] == 'initial':
-        for move in data['data']:
-            await new_move(game, move['data'], uid, ws)
-    # Run new moves
-    elif data['type'] == 'move':
-        await new_move(game, data['data'], uid, ws)
+    # Update board
+    elif data['type'] == 'moves':
+        await update_board(game, data['data'], uid, ws, False)
+    elif data['type'] == 'fen':
+        await update_board(game, data['data'], uid, ws, True)
     # Clean Hash
     elif data['type'] == 'clear_hash':
         if game.engine is not None:
