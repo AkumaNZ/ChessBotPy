@@ -31,7 +31,6 @@ WHITE = 1
 ME = 0
 OPPONENT = 1
 BOTH = 2
-NONE = 3
 
 
 class GameObject():
@@ -43,15 +42,15 @@ class GameObject():
         self.visible = True
         self.missed_moves = False
         self.side = WHITE
-        self.run = settings.config.getint('defaults', 'run')
+        self.running = True
         self.arrows = defaultdict(list)
 
     def should_run(self):
-        if self.run == NONE:
+        if not self.running:
             return False
         if self.board.is_game_over():
             return False
-        if self.run != BOTH and self.board.turn != self.side:
+        if settings.config.getint('gui', 'run') != BOTH and self.board.turn != self.side:
             return False
         return True
 

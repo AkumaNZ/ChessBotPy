@@ -39,25 +39,25 @@ def initialize_engine_settings_file(dummy):
 def update_settings(data, game, dummy):
     '''
     Updates settings.ini file.
-    Returns True if engine should be ran after updating and False if engine should be closed.
+    Returns True if engine should be ran after updating.
     '''
     key = data['key']
     value = data['value']
+    # Update game object if the key exists and the value is not the same as before
+    if hasattr(game, key):
+        setattr(game, key, value)
+        if key == 'running':
+            return value
+
     if config.has_option('gui', key):
         # Set gui settings and save to file
         config['gui'][key] = str(value)
+
         with open('settings.ini', 'w') as config_file:
             config.write(config_file)
         # Re-initialize engine settings file, if engine path was changed.
         if key == 'engine_path':
             initialize_engine_settings_file(dummy)
-    else:
-        if getattr(game, key) != value:
-            setattr(game, key, value)
-            if key == 'run' and value == 3:  # 3 = NONE
-                return False
-        else:
-            return False
     return True
 
 
@@ -77,7 +77,7 @@ async def update_engine_settings(data):
 
 def get_mapped_settings():
     yield {'key': 'enginePath', 'value': config.get('gui', 'engine_path')}
-    yield {'key': 'runEngineFor', 'value': config.getint('defaults', 'run')}
+    yield {'key': 'runEngineFor', 'value': config.getint('gui', 'run')}
     yield {'key': 'useVoice', 'value': config.getboolean('gui', 'use_voice')}
     yield {'key': 'drawBoard', 'value': config.getboolean('gui', 'draw_board')}
     yield {'key': 'useDepth', 'value': config.getboolean('gui', 'use_depth')}

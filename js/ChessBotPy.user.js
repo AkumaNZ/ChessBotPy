@@ -107,13 +107,13 @@ function hotkey(e) {
 		app.playingAs = 0;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
 	} else if (e.altKey && e.code === 'KeyA') {
-		log('Playing as Both');
-		app.runEngineFor = 2;
-		ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value: 2 } }));
+		log('Resuming');
+		app.running = true;
+		ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: true } }));
 	} else if (e.altKey && e.code === 'KeyS') {
 		log('Stopping');
-		app.runEngineFor = 3;
-		ws.send(JSON.stringify({ type: 'setting', data: { key: 'run', value: 3 } }));
+		app.running = false;
+		ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: false } }));
 	}
 }
 
@@ -194,14 +194,14 @@ const waitForElement = async (selector, timeout) => {
 
 const loadCSS = url => {
 	return new Promise((resolve, reject) => {
-		const linkElement = doc.createElement('link');
+		const linkElement = document.createElement('link');
 		linkElement.rel = 'stylesheet';
 		linkElement.type = 'text/css';
 		linkElement.href = url;
 		linkElement.media = 'all';
 		linkElement.onload = event => resolve(event);
 		linkElement.onerror = err => reject(err);
-		const head = doc.querySelector('head');
+		const head = document.querySelector('head');
 		head.appendChild(linkElement);
 	});
 };
@@ -230,13 +230,12 @@ const main = async () => {
 		height: 100vh;
 		padding: 2px;
 		grid-template-columns: 1fr;
-		grid-template-rows: 50vh 60vh 43vh 50vh 50vh;
 		grid-template-areas:
 			"main"
 			"board"
 			"pvs"
-			"console"
-			"engine";
+			"engine"
+			"console";
 	}
 
 	@media (min-width: 1024px) {
@@ -357,7 +356,7 @@ const main = async () => {
 		cursor: pointer;
 	}
 	// Generated tailwindcss goes here
-	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}html{box-sizing:border-box;font-family:sans-serif}*,:after,:before{box-sizing:inherit}h1,pre{margin:0}button{background:transparent;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{border:0 solid #e2e8f0}input::-webkit-input-placeholder{color:#a0aec0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-700{background-color:#4a5568}.bg-gray-800{background-color:#2d3748}.bg-gray-900{background-color:#1a202c}.bg-indigo-500{background-color:#667eea}.hover\\:bg-indigo-600:hover{background-color:#5a67d8}.border-gray-500{border-color:#a0aec0}.border-gray-700{border-color:#4a5568}.border-gray-900{border-color:#1a202c}.border-indigo-500{border-color:#667eea}.hover\\:border-indigo-400:hover{border-color:#7f9cf5}.focus\\:border-indigo-500:focus{border-color:#667eea}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:-webkit-box;display:flex}.inline-flex{display:-webkit-inline-box;display:inline-flex}.hidden{display:none}.flex-row{-webkit-box-direction:normal;flex-direction:row}.flex-row{-webkit-box-orient:horizontal}.flex-col{-webkit-box-orient:vertical;-webkit-box-direction:normal;flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{-webkit-box-align:center;align-items:center}.font-sans{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-10{height:2.5rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.overflow-y-auto{overflow-y:auto}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{color:#fff}.text-gray-100{color:#f7fafc}.text-gray-200{color:#edf2f7}.text-gray-400{color:#cbd5e0}.text-gray-500{color:#a0aec0}.text-gray-600{color:#718096}.text-gray-700{color:#4a5568}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.w-4{width:1rem}.w-6{width:1.5rem}.w-32{width:8rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
+	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}html{box-sizing:border-box;font-family:sans-serif}*,:after,:before{box-sizing:inherit}h1,pre{margin:0}button{background:transparent;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{border:0 solid #e2e8f0}input::-webkit-input-placeholder{color:#a0aec0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-700{background-color:#4a5568}.bg-gray-800{background-color:#2d3748}.bg-gray-900{background-color:#1a202c}.bg-indigo-500{background-color:#667eea}.hover\\:bg-indigo-600:hover{background-color:#5a67d8}.border-gray-500{border-color:#a0aec0}.border-gray-700{border-color:#4a5568}.border-gray-900{border-color:#1a202c}.border-indigo-500{border-color:#667eea}.hover\\:border-indigo-400:hover{border-color:#7f9cf5}.focus\\:border-indigo-500:focus{border-color:#667eea}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:-webkit-box;display:flex}.inline-flex{display:-webkit-inline-box;display:inline-flex}.hidden{display:none}.flex-row{-webkit-box-direction:normal;flex-direction:row}.flex-row{-webkit-box-orient:horizontal}.flex-col{-webkit-box-orient:vertical;-webkit-box-direction:normal;flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{-webkit-box-align:center;align-items:center}.font-sans{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-10{height:2.5rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{color:#fff}.text-gray-100{color:#f7fafc}.text-gray-200{color:#edf2f7}.text-gray-400{color:#cbd5e0}.text-gray-500{color:#a0aec0}.text-gray-600{color:#718096}.text-gray-700{color:#4a5568}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.w-4{width:1rem}.w-6{width:1.5rem}.w-32{width:8rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}.lg\\:overflow-y-auto{overflow-y:auto}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
 	`;
 	let head = document.getElementsByTagName('head')[0];
 	style = document.createElement('style');
@@ -372,159 +371,168 @@ const main = async () => {
 	body.innerHTML = `
 	<div id="app" class="font-sans text-gray-100">
 		<div id="layout">
-			<div id="main" class="bg-gray-800 p-3 overflow-y-auto">
+			<div id="main" class="bg-gray-800 p-3 lg:overflow-y-auto">
+				<div class='inline-flex flex-col'>
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Status</span>
+						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+							<input 
+								type="checkbox" name="running" v-model="running" @change="handleSettingChange($event, 'running', 'checkbox')"
+								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2" :title=" running ? 'ALT + S' : 'ALT + A'">{{ running ? 'Running' : 'Paused' }}</span>
+						</label>
+					</div>
 
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
-					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input 
-							type="radio" name="side" value="1" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
-							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
-						>
-						<span class="ml-2">White</span>
-					</label>
-					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input 
-							type="radio" name="side" value="0" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
-							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
-						>
-						<span class="ml-2">Black</span>
-					</label>
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
+						<label class="radio inline-flex cursor-pointer relative mb-2">
+							<input 
+								type="radio" name="side" value="1" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
+								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2" title="ALT + W">White</span>
+						</label>
+						<label class="radio inline-flex cursor-pointer relative mb-2">
+							<input 
+								type="radio" name="side" value="0" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
+								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2" title="ALT + Q">Black</span>
+						</label>
+					</div>
+
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Run engine for</span>
+						<label class="radio inline-flex cursor-pointer relative mb-2">
+							<input
+								type="radio" name="run-engine" value="0" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
+								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2">Me</span>
+						</label>
+						<label class="radio inline-flex cursor-pointer relative mb-2">
+							<input
+								type="radio" name="run-engine" value="1" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
+								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2">Opponent</span>
+						</label>
+						<label class="radio inline-flex cursor-pointer relative mb-2">
+							<input
+								type="radio" name="run-engine" value="2" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
+								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2">Both</span>
+						</label>
+					</div>
 				</div>
 
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Run engine for</span>
-					<label class="radio inline-flex cursor-pointer relative mb-2">
-						<input 
-							type="radio" name="run-engine" value="3" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
-							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
-						>
-						<span class="ml-2">None</span>
-					</label>
-					<label class="radio inline-flex cursor-pointer relative mb-2">
+				<div class='inline-flex flex-col'>
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
+						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+							<input
+								type="checkbox" v-model="useDepth" @change="handleSettingChange($event, 'use_depth', 'checkbox')"
+								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2">Depth {{ depth }}</span>
+						</label>
 						<input
-							type="radio" name="run-engine" value="0" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
-							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							type="range" min="0" max="25" v-model.number="depth" @change="handleSettingChange($event, 'depth', 'int')"
+							class="slider w-48 appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 						>
-						<span class="ml-2">Me</span>
-					</label>
-					<label class="radio inline-flex cursor-pointer relative mb-2">
+						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+							<input
+								type="checkbox" v-model="useTime" @change="handleSettingChange($event, 'use_time', 'checkbox')"
+								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2">Time {{ time }}</span>
+						</label>
 						<input
-							type="radio" name="run-engine" value="1" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
-							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							type="range" min="0" max="60" step="0.1" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
+							class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 						>
-						<span class="ml-2">Opponent</span>
-					</label>
-					<label class="radio inline-flex cursor-pointer relative mb-2">
+					</div>
+
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="w-48 text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Principal variations</span>
+						<label class="mb-2">
+							PV {{ multipv }}
+						</label>
 						<input
-							type="radio" name="run-engine" value="2" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
-							class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							type="range" min="1" max="10" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
+							class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 						>
-						<span class="ml-2">Both</span>
-					</label>
+					</div>
 				</div>
 
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
-					<label class="checkbox inline-flex cursor-pointer relative mb-2">
+				<div class='inline-flex flex-col'>
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
 						<input
-							type="checkbox" v-model="useDepth" @change="handleSettingChange($event, 'use_depth', 'checkbox')"
-							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
+							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 						>
-						<span class="ml-2">Depth {{ depth }}</span>
-					</label>
-					<input
-						type="range" min="0" max="25" v-model.number="depth" @change="handleSettingChange($event, 'depth', 'int')"
-						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
-					>
-					<label class="checkbox inline-flex cursor-pointer relative mb-2">
+					</div>
+
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book</span>
 						<input
-							type="checkbox" v-model="useTime" @change="handleSettingChange($event, 'use_time', 'checkbox')"
-							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							type="text" v-model="book1" @change="handleSettingChange($event, 'bookfile', 'path')" :title="book1"
+							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 						>
-						<span class="ml-2">Time {{ time }}</span>
-					</label>
-					<input
-						type="range" min="0" max="60" step="0.1" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
-						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
-					>
-				</div>
+					</div>
 
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Principal variations</span>
-					<label class="mb-2">
-						PV {{ multipv }}
-					</label>
-					<input
-						type="range" min="1" max="10" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
-						class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
-					>
-				</div>
-
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
-					<input
-						type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
-						class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-					>
-				</div>
-
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Board</span>
-					<label class="checkbox inline-flex cursor-pointer relative mb-2">
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 2</span>
 						<input
-							type="checkbox" v-model="drawBoard" @change="handleSettingChange($event, 'draw_board', 'checkbox')"
-							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							type="text" v-model="book2" @change="handleSettingChange($event, 'bookfile2', 'path')" :title="book2"
+							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 						>
-						<span class="ml-2">Draw board</span>
-					</label>
+					</div>
 				</div>
+				<div class='inline-flex flex-col'>
+					<div class="inline-flex flex-col mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Board</span>
+						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+							<input
+								type="checkbox" v-model="drawBoard" @change="handleSettingChange($event, 'draw_board', 'checkbox')"
+								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2">Draw board</span>
+						</label>
+					</div>
 
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Voice</span>
-					<label class="checkbox inline-flex cursor-pointer relative mb-2">
-						<input
-							type="checkbox" v-model="useVoice" @change="handleSettingChange($event, 'use_voice', 'checkbox')"
-							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
-						>
-						<span class="ml-2">Enable voice</span>
-					</label>
+					<div class="inline-flex flex-col mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Voice</span>
+						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+							<input
+								type="checkbox" v-model="useVoice" @change="handleSettingChange($event, 'use_voice', 'checkbox')"
+								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2">Enable voice</span>
+						</label>
+					</div>
+
+					<div class="inline-flex flex-col mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engline log</span>
+						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+							<input
+								type="checkbox" v-model="logEngine" @change="handleSettingChange($event, 'clear_log', 'checkbox')"
+								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+							>
+							<span class="ml-2" title="Clear log each time before engine is ran">Clear log</span>
+						</label>
+					</div>
 				</div>
-
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book</span>
-					<input
-						type="text" v-model="book1" @change="handleSettingChange($event, 'bookfile', 'path')" :title="book1"
-						class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-					>
-				</div>
-
-				<div class="inline-flex flex-col mr-10 mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 2</span>
-					<input
-						type="text" v-model="book2" @change="handleSettingChange($event, 'bookfile2', 'path')" :title="book2"
-						class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-					>
-				</div>
-
-				<div class="inline-flex flex-col mb-4">
-					<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engline log</span>
-					<label class="checkbox inline-flex cursor-pointer relative mb-2">
-						<input
-							type="checkbox" v-model="logEngine" @change="handleSettingChange($event, 'clear_log', 'checkbox')"
-							class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
-						>
-						<span class="ml-2" title="Clear log each time before engine is ran">Clear log</span>
-					</label>
-				</div>
-
 			</div>
 
 			<div id="board" class="bg-gray-800 p-3" >
 				<div id="board-container" v-html="board" v-if="drawBoard"></div>
 			</div>
 
-			<div id="pvs" class="bg-gray-800 p-3 overflow-y-auto">
+			<div id="pvs" class="bg-gray-800 p-3 lg:overflow-y-auto">
 				<div class="flex flex-row flex-wrap">
 					<div
 						v-for="(line, pv_index) in pvs"
@@ -547,12 +555,12 @@ const main = async () => {
 				</div>
 			</div>
 
-			<div id="console" class="font-mono bg-gray-800 p-3 overflow-y-auto" @scroll="onConsoleScroll">
+			<div id="console" class="font-mono bg-gray-800 p-3 lg:overflow-y-auto" @scroll="onConsoleScroll">
 				<h1 class="text-4xl font-display text-gray-200">Console</h1>
 				<pre v-for='message in messages' class="whitespace-pre-wrap">{{message}}</pre>
 			</div>
 
-			<div id="settings" class="bg-gray-800 p-3 overflow-y-auto">
+			<div id="settings" class="bg-gray-800 p-3 lg:overflow-y-auto">
 				<h1 class="text-4xl font-display text-gray-200">Engine settings</h1>
 				<div v-for="setting in engineSettings" class="mb-4">
 
@@ -643,6 +651,7 @@ const main = async () => {
 			logEngine: '',
 			pvs: [],
 			selectedPV: 1,
+			running: true,
 		},
 		methods: {
 			onConsoleScroll(event) {
