@@ -62,8 +62,6 @@ def read_book(book, opening_moves, game):
             for entry in reader.find_all(game.board):
                 found_opening = True
                 opening_moves.append(entry)
-    else:
-        print(book, "is not a valid book.")
     return found_opening
 
 
