@@ -28,20 +28,10 @@ if (host === 'www.chess.com') {
 }
 
 function findSideLichess() {
-	let movesMade = [...doc.querySelectorAll(siteMap[host].sanTarget)].map(x => x.innerText.trim());
-	let turnElement = doc.querySelector('.rclock-turn__text');
-	let turn = '';
 	let side = WHITE;
-	if (turnElement != null) {
-		turn = turnElement.innerText.trim();
-		side =
-			turn === 'Your turn'
-				? movesMade.length % 2 == 0
-					? WHITE
-					: BLACK
-				: movesMade.length % 2 == 0
-				? BLACK
-				: WHITE;
+	let turnElement = doc.querySelector('.rclock-bottom .time');
+	if (turnElement != null && turnElement.title == 'black clock') {
+		side = BLACK;
 	}
 	return side;
 }
@@ -147,7 +137,7 @@ const findGame = async () => {
 			if (fenput != null) {
 				if (fenput.value != fen) {
 					fen = fenput.value;
-					log('Sending updated FEN.');
+					// log('Sending updated FEN.');
 					ws.send(JSON.stringify({ type: 'fen', data: fen }));
 					continue;
 				}
@@ -161,7 +151,7 @@ const findGame = async () => {
 				update_side();
 			}
 			numOfMoves = moves.length;
-			log('Sending updated moves.');
+			// log('Sending updated moves.');
 			ws.send(JSON.stringify({ type: 'moves', data: moves }));
 		}
 	}
