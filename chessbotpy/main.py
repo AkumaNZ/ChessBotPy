@@ -6,6 +6,7 @@ import chess.polyglot
 import json
 from pathlib import Path
 from collections import defaultdict
+from functools import reduce
 # Own modules
 import settings
 import voice
@@ -55,14 +56,37 @@ class GameObject():
         return True
 
 
-def read_book(book, opening_moves, game):
-    found_opening = False
-    if Path(book).is_file():
-        with chess.polyglot.open_reader(book) as reader:
+def read_book(book, opening_moves, game, line, depth):
+    engine_depth = settings.config.getint('gui', 'depth')
+    max_depth = engine_depth if engine_depth > 0 else 5
+
+    if depth >= max_depth:
+        opening_moves.append(line)
+        return
+
+    eol = True
+    with chess.polyglot.open_reader(book) as reader:
+        if depth < settings.config.getint('gui', 'multipv'):
             for entry in reader.find_all(game.board):
-                found_opening = True
-                opening_moves.append(entry)
-    return found_opening
+                eol = False
+                new_line = line.copy()
+                new_line.append(entry)
+                game.board.push(entry.move)
+                read_book(book, opening_moves, game, new_line, depth + 1)
+                game.board.pop()
+        else:
+            eol = False
+            try:
+                entry = reader.find(game.board)
+                new_line = line.copy()
+                new_line.append(entry)
+                game.board.push(entry.move)
+                read_book(book, opening_moves, game, new_line, depth + 1)
+                game.board.pop()
+            except Exception:
+                pass
+    if eol and len(line) > 0:
+        opening_moves.append(line)
 
 
 async def close_engine(game):
@@ -109,25 +133,41 @@ async def run_engine(uid, ws):
         # Look for opening moves from books
         found_book_move = False
         opening_moves = []
+
         if settings.config.has_option('gui', 'bookfile'):
             book = settings.config.get('gui', 'bookfile')
-            found_book_move = read_book(book, opening_moves, game)
+            if Path(book).is_file():
+                read_book(book, opening_moves, game, [], 0)
+                found_book_move = len(opening_moves) > 0
 
         if not found_book_move and settings.config.has_option('gui', 'bookfile2'):
             book = settings.config.get('gui', 'bookfile2')
             if Path(book).is_file():
-                found_book_move = read_book(book, opening_moves, game)
+                read_book(book, opening_moves, game, [], 0)
+                found_book_move = len(opening_moves) > 0
 
         if found_book_move:
-            opening_moves = sorted(opening_moves, key=lambda x: x.weight, reverse=True)
-            best_move = game.board.san(opening_moves[0].move)
-            arrow_pv = 1
-            for entry in opening_moves:
-                arrow = drawing.get_arrow(entry.move, game.board.turn, 0)
-                game.arrows[arrow_pv].append(arrow)
-                arrow_pv += 1
-            opening_moves = [{"multipv": i + 1, "pv": [game.board.san(x.move)], "score": x.weight} for i, x in enumerate(opening_moves)]
-            await ws.send(serialize_message("multipv", opening_moves))
+            # opening_moves = sorted(opening_moves, key=lambda x: x[0].weight, reverse=True)
+            best_move = game.board.san(opening_moves[0][0].move)
+            multipv = []
+            for list_index, movelist in enumerate(opening_moves):
+                score = 0
+                pv = []
+                # Calculate avg. weight of the line and append all the SAN moves
+                for entry_index, entry in enumerate(movelist):
+                    pv.append(game.board.san(entry.move))
+                    arrow = drawing.get_arrow(entry.move, game.board.turn, entry_index)
+                    game.arrows[list_index + 1].append(arrow)
+                    game.board.push(entry.move)
+                    score += entry.weight
+                # Unwind the move stack
+                for _ in range(len(pv)):
+                    game.board.pop()
+                line = {'multipv': list_index + 1, 'score': round(score / len(pv), 0), 'pv': pv}
+                multipv.append(line)
+
+            multipv = sorted(multipv, key=lambda x: x['score'], reverse=True)
+            await ws.send(serialize_message('multipv', multipv))
         else:
             # If there no opening moves were found, use engine to analyse instead
             multipv = settings.config.getint('gui', 'multipv')
