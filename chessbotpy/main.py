@@ -147,7 +147,7 @@ async def run_engine(uid, ws):
                 found_book_move = len(opening_moves) > 0
 
         if found_book_move:
-            # opening_moves = sorted(opening_moves, key=lambda x: x[0].weight, reverse=True)
+            opening_moves = sorted(opening_moves, key=lambda x: sum([y.weight for y in x]), reverse=True)
             best_move = game.board.san(opening_moves[0][0].move)
             multipv = []
             for list_index, movelist in enumerate(opening_moves):
@@ -166,7 +166,7 @@ async def run_engine(uid, ws):
                 line = {'multipv': list_index + 1, 'score': round(score / len(pv), 0), 'pv': pv}
                 multipv.append(line)
 
-            multipv = sorted(multipv, key=lambda x: x['score'], reverse=True)
+            # multipv = sorted(multipv, key=lambda x: x['score'], reverse=True)
             await ws.send(serialize_message('multipv', multipv))
         else:
             # If there no opening moves were found, use engine to analyse instead
