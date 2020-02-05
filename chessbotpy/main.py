@@ -6,7 +6,6 @@ import chess.polyglot
 import json
 from pathlib import Path
 from collections import defaultdict
-from functools import reduce
 # Own modules
 import settings
 import voice
@@ -156,7 +155,7 @@ async def run_engine(uid, ws):
                 # Calculate avg. weight of the line and append all the SAN moves
                 for entry_index, entry in enumerate(movelist):
                     pv.append(game.board.san(entry.move))
-                    arrow = drawing.get_arrow(entry.move, game.board.turn, entry_index)
+                    arrow = drawing.get_arrow(entry.move, game.board.turn, entry_index // 2)
                     game.arrows[list_index + 1].append(arrow)
                     game.board.push(entry.move)
                     score += entry.weight

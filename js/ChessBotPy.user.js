@@ -6,7 +6,7 @@
 // @match       *://chess24.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
-// @version     2.0
+// @version     2.1
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -28,11 +28,7 @@ if (host === 'www.chess.com') {
 }
 
 function findSideLichess() {
-	let side = WHITE;
-	let turnElement = doc.querySelector('.rclock-bottom .time');
-	if (turnElement != null && turnElement.title == 'black clock') {
-		side = BLACK;
-	}
+	let side = doc.querySelector('.orientation-white') != null ? WHITE : BLACK;
 	return side;
 }
 
@@ -139,8 +135,8 @@ const findGame = async () => {
 					fen = fenput.value;
 					// log('Sending updated FEN.');
 					ws.send(JSON.stringify({ type: 'fen', data: fen }));
-					continue;
 				}
+				continue;
 			}
 		}
 		let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)]
