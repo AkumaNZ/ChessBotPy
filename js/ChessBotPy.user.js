@@ -6,7 +6,7 @@
 // @match       *://chess24.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
-// @version     2.1
+// @version     2.3
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -85,39 +85,28 @@ function uuidv4() {
 
 function hotkey(e) {
 	if (e.altKey && e.code === 'KeyW') {
-		log('Playing as white');
+		console.log('Playing as white');
 		app.playingAs = 1;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 1 } }));
 	} else if (e.altKey && e.code === 'KeyQ') {
-		log('Playing as black');
+		console.log('Playing as black');
 		app.playingAs = 0;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
 	} else if (e.altKey && e.code === 'KeyA') {
-		log('Resuming');
+		console.log('Resuming');
 		app.running = true;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: true } }));
 	} else if (e.altKey && e.code === 'KeyS') {
-		log('Stopping');
+		console.log('Stopping');
 		app.running = false;
 		ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: false } }));
-	}
-}
-
-function log(...args) {
-	console.log(...args);
-	app.messages.push(args.join(' '));
-	if (app.consoleBottomedOut) {
-		setTimeout(() => {
-			var consoleElement = document.getElementById('console');
-			consoleElement.scrollTop = consoleElement.scrollHeight;
-		}, 1);
 	}
 }
 
 function update_side() {
 	let side = siteMap[host].sideFinder();
 	app.playingAs = side;
-	log('Starting as', side == 0 ? 'black' : 'white');
+	console.log('Starting as', side == 0 ? 'black' : 'white');
 	ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: side } }));
 }
 
@@ -125,7 +114,7 @@ const findGame = async () => {
 	await waitForElement(siteMap[host].sanTarget, 1);
 	// Get the side you're plaing as
 	update_side();
-	log('Starting loop');
+	console.log('Starting loop');
 	while (true) {
 		await sleep(50);
 		if (host === 'lichess.org') {
@@ -133,7 +122,7 @@ const findGame = async () => {
 			if (fenput != null) {
 				if (fenput.value != fen) {
 					fen = fenput.value;
-					// log('Sending updated FEN.');
+					console.log('Sending updated FEN.');
 					ws.send(JSON.stringify({ type: 'fen', data: fen }));
 				}
 				continue;
@@ -147,7 +136,7 @@ const findGame = async () => {
 				update_side();
 			}
 			numOfMoves = moves.length;
-			// log('Sending updated moves.');
+			console.log('Sending updated moves.');
 			ws.send(JSON.stringify({ type: 'moves', data: moves }));
 		}
 	}
@@ -217,31 +206,19 @@ const main = async () => {
 		padding: 2px;
 		grid-template-columns: 1fr;
 		grid-template-areas:
-			"main"
 			"board"
 			"pvs"
+			"main"
 			"engine"
-			"console";
-	}
-
-	@media (min-width: 1024px) {
-		#layout {
-			grid-template-columns: 1fr 1fr;
-			grid-template-rows: 40vh 60vh 50vh;
-			grid-template-areas:
-				"main main"
-				"pvs board"
-				"engine console";
-		}
 	}
 
 	@media (min-width: 1280px) {
 		#layout {
-			grid-template-columns: 9fr 10fr 14fr;
-			grid-template-rows: 13fr 10fr;
+			grid-template-columns: 2fr 3fr;
+			grid-template-rows: 67fr 33fr;
 			grid-template-areas:
-				"main main board"
-				"engine console pvs";
+				"main board"
+				"engine pvs";
 		}
 	}
 
@@ -263,15 +240,11 @@ const main = async () => {
 	}
 
 	#board-container {
-		height: 56vh;
+		height: 65vh;
 	}
 
 	#settings {
 		grid-area: engine;
-	}
-
-	#console {
-		grid-area: console;
 	}
 
 	#pvs {
@@ -342,7 +315,7 @@ const main = async () => {
 		cursor: pointer;
 	}
 	// Generated tailwindcss goes here
-	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}html{box-sizing:border-box;font-family:sans-serif}*,:after,:before{box-sizing:inherit}h1,pre{margin:0}button{background:transparent;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{border:0 solid #e2e8f0}input::-webkit-input-placeholder{color:#a0aec0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-700{background-color:#4a5568}.bg-gray-800{background-color:#2d3748}.bg-gray-900{background-color:#1a202c}.bg-indigo-500{background-color:#667eea}.hover\\:bg-indigo-600:hover{background-color:#5a67d8}.border-gray-500{border-color:#a0aec0}.border-gray-700{border-color:#4a5568}.border-gray-900{border-color:#1a202c}.border-indigo-500{border-color:#667eea}.hover\\:border-indigo-400:hover{border-color:#7f9cf5}.focus\\:border-indigo-500:focus{border-color:#667eea}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:-webkit-box;display:flex}.inline-flex{display:-webkit-inline-box;display:inline-flex}.hidden{display:none}.flex-row{-webkit-box-direction:normal;flex-direction:row}.flex-row{-webkit-box-orient:horizontal}.flex-col{-webkit-box-orient:vertical;-webkit-box-direction:normal;flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{-webkit-box-align:center;align-items:center}.font-sans{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-10{height:2.5rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{color:#fff}.text-gray-100{color:#f7fafc}.text-gray-200{color:#edf2f7}.text-gray-400{color:#cbd5e0}.text-gray-500{color:#a0aec0}.text-gray-600{color:#718096}.text-gray-700{color:#4a5568}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.w-4{width:1rem}.w-6{width:1.5rem}.w-32{width:8rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}.lg\\:overflow-y-auto{overflow-y:auto}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
+	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}html{box-sizing:border-box;font-family:sans-serif}*,:after,:before{box-sizing:inherit}h1,pre{margin:0}button{background:transparent;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{border:0 solid #e2e8f0}input::-webkit-input-placeholder{color:#a0aec0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-700{background-color:#4a5568}.bg-gray-800{background-color:#2d3748}.bg-gray-900{background-color:#1a202c}.bg-indigo-500{background-color:#667eea}.hover\\:bg-indigo-600:hover{background-color:#5a67d8}.border-gray-500{border-color:#a0aec0}.border-gray-700{border-color:#4a5568}.border-gray-900{border-color:#1a202c}.border-indigo-500{border-color:#667eea}.hover\\:border-indigo-400:hover{border-color:#7f9cf5}.focus\\:border-indigo-500:focus{border-color:#667eea}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:-webkit-box;display:flex}.inline-flex{display:-webkit-inline-box;display:inline-flex}.hidden{display:none}.flex-row{-webkit-box-direction:normal;flex-direction:row}.flex-row{-webkit-box-orient:horizontal}.flex-col{-webkit-box-orient:vertical;-webkit-box-direction:normal;flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{-webkit-box-align:center;align-items:center}.font-sans{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-10{height:2.5rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{color:#fff}.text-gray-100{color:#f7fafc}.text-gray-200{color:#edf2f7}.text-gray-400{color:#cbd5e0}.text-gray-500{color:#a0aec0}.text-gray-600{color:#718096}.text-gray-700{color:#4a5568}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.w-1{width:.25rem}.w-4{width:1rem}.w-6{width:1.5rem}.w-32{width:8rem}.w-40{width:10rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}.lg\\:overflow-y-auto{overflow-y:auto}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
 	`;
 	let head = document.getElementsByTagName('head')[0];
 	style = document.createElement('style');
@@ -441,7 +414,7 @@ const main = async () => {
 						>
 					</div>
 
-					<div class="inline-flex flex-col mr-10 mb-4">
+					<div class="flex flex-col mr-10 mb-4">
 						<span class="w-48 text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Principal variations</span>
 						<label class="mb-2">
 							PV {{ multipv }}
@@ -477,9 +450,25 @@ const main = async () => {
 							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 						>
 					</div>
+
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 3</span>
+						<input
+							type="text" v-model="book3" @change="handleSettingChange($event, 'bookfile3', 'path')" :title="book3"
+							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
+						>
+					</div>
+
+					<div class="inline-flex flex-col mr-10 mb-4">
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 4</span>
+						<input
+							type="text" v-model="book4" @change="handleSettingChange($event, 'bookfile4', 'path')" :title="book4"
+							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
+						>
+					</div>
 				</div>
-				<div class='inline-flex flex-col'>
-					<div class="inline-flex flex-col mb-4">
+				<div class='flex'>
+					<div class="inline-flex flex-col mb-4 mr-4">
 						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Board</span>
 						<label class="checkbox inline-flex cursor-pointer relative mb-2">
 							<input
@@ -490,7 +479,7 @@ const main = async () => {
 						</label>
 					</div>
 
-					<div class="inline-flex flex-col mb-4">
+					<div class="inline-flex flex-col mb-4 mr-4">
 						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Voice</span>
 						<label class="checkbox inline-flex cursor-pointer relative mb-2">
 							<input
@@ -501,7 +490,7 @@ const main = async () => {
 						</label>
 					</div>
 
-					<div class="inline-flex flex-col mb-4">
+					<div class="inline-flex flex-col mb-4 mr-4">
 						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engline log</span>
 						<label class="checkbox inline-flex cursor-pointer relative mb-2">
 							<input
@@ -523,9 +512,12 @@ const main = async () => {
 					<div
 						v-for="(line, pv_index) in pvs"
 						@click="onSelectPV(pv_index + 1)"
-						class="w-32 mr-4 mb-3 p-2 border-2 border-gray-500 rounded hover:border-indigo-400"
+						class="w-48 mr-4 mb-3 p-2 border-2 border-gray-500 rounded hover:border-indigo-400"
 						:class="{ 'border-indigo-500': selectedPV == pv_index + 1 }"
 					>
+						<div class="text-gray-900 font-display text-xs tracking-wide" :title="line.eco">
+							{{ line.eco }}
+						</div>
 						<div class="text-gray-500 font-display font-bold text-xs uppercase tracking-wide mb-2">
 							PV {{ line.multipv }}
 							<span class="font-sans text-white text-sm ml-2">
@@ -539,11 +531,6 @@ const main = async () => {
 						</div>
 					</div>
 				</div>
-			</div>
-
-			<div id="console" class="font-mono bg-gray-800 p-3 lg:overflow-y-auto" @scroll="onConsoleScroll">
-				<h1 class="text-4xl font-display text-gray-200">Console</h1>
-				<pre v-for='message in messages' class="whitespace-pre-wrap">{{message}}</pre>
 			</div>
 
 			<div id="settings" class="bg-gray-800 p-3 lg:overflow-y-auto">
@@ -627,24 +614,20 @@ const main = async () => {
 			depth: 8,
 			useTime: false,
 			time: 0.0,
-			consoleBottomedOut: true,
 			engineSettings: [],
 			drawBoard: true,
 			useVoice: true,
 			multipv: 1,
 			book1: '',
 			book2: '',
+			book3: '',
+			book4: '',
 			logEngine: '',
 			pvs: [],
 			selectedPV: 1,
 			running: true,
 		},
 		methods: {
-			onConsoleScroll(event) {
-				const top = Math.round(event.target.scrollTop);
-				const offset = event.target.scrollHeight - event.target.offsetHeight;
-				this.consoleBottomedOut = Math.abs(top - offset) < 2;
-			},
 			handleSettingChange(event, key, type) {
 				let value = event.target.value;
 				if (type == 'checkbox') {
@@ -656,21 +639,21 @@ const main = async () => {
 				} else if (type == 'path') {
 					value = value.replace(/\\/g, '/');
 				}
-				log(`Changed ${key} to:`, value);
+				console.log(`Changed ${key} to:`, value);
 				ws.send(JSON.stringify({ type: 'setting', data: { key, value } }));
 			},
 			handleEngineSettingChange(key, value) {
-				log(`Changed engine setting ${key} to:`, value);
+				console.log(`Changed engine setting ${key} to:`, value);
 				ws.send(JSON.stringify({ type: 'engine_setting', data: { key, value } }));
 			},
 			handleButton(key) {
 				if (key === 'Clear Hash') {
-					log('Clearing hash...');
+					console.log('Clearing hash...');
 					ws.send(JSON.stringify({ type: 'clear_hash', data: true }));
 				}
 			},
 			onSelectPV(pv) {
-				log('Changing PV to', pv);
+				console.log('Changing PV to', pv);
 				this.selectedPV = pv;
 				ws.send(JSON.stringify({ type: 'draw_svg', data: pv }));
 			},
@@ -680,10 +663,10 @@ const main = async () => {
 	try {
 		ws = await connect(`ws://127.0.0.1:5678/${uid}`);
 	} catch {
-		log('Failed to connect. Make sure the server is running and refresh the page.');
+		console.log('Failed to connect. Make sure the server is running and refresh the page.');
 		return;
 	}
-	log('Connection estabished.');
+	console.log('Connection estabished.');
 	ws.onmessage = function(event) {
 		data = JSON.parse(event.data);
 		switch (data.target) {
@@ -691,7 +674,7 @@ const main = async () => {
 				app.board = data.message;
 				break;
 			case 'error':
-				log(data.message);
+				console.log(data.message);
 				break;
 			case 'setting':
 				const { key, value } = data.message;
@@ -699,27 +682,27 @@ const main = async () => {
 					app.$data[key] = value;
 				} else {
 					console.error(`No key: ${key} found in app data!`);
-					log(`Error: No key: ${key} found in app data!`);
+					console.log(`Error: No key: ${key} found in app data!`);
 				}
 
 				break;
 			case 'engine_settings':
 				app.engineSettings = data.message;
-				log('Received engine settings');
+				console.log('Received engine settings');
 				break;
 			case 'multipv':
 				app.pvs = data.message;
 				app.selectedPV = 1;
 				break;
 			default:
-				log('Received unknown message type, see console for details');
+				console.log('Received unknown message type, see console for details');
 				console.log(data);
 		}
 	};
 
 	doc.addEventListener('visibilitychange', () => {
 		ws.send(JSON.stringify({ type: 'visibility', data: !doc.hidden }));
-		log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
+		console.log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
 	});
 	doc.addEventListener('keydown', hotkey);
 	await findGame();

@@ -30,6 +30,8 @@ To build a single executable, run
 To build a minified version of tailwind, run
 `npm run build:css` and in css/tailwind.min.css, replace all backslashes `\` with double backslashes `\\`
 
+this requires that postcss-cli is installed `npm i -g postcss-cli`
+
 To use development version of tailwind
 `npm run serve`
 and switch out the css in the head tag with the version loaded from localhost

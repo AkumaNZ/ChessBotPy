@@ -8,8 +8,15 @@ from pathlib import Path
 from collections import defaultdict
 # Own modules
 import settings
+import eco
 import voice
 import drawing
+
+try:
+    eco.load_eco('eco')
+except Exception as err:
+    print(err)
+    print("Could not load eco files. Make sure there's an 'eco' folder in the root with these files: https://github.com/niklasf/eco")
 
 try:
     dummy = chess.engine.SimpleEngine.popen_uci(settings.config.get('gui', 'engine_path'))
@@ -55,37 +62,23 @@ class GameObject():
         return True
 
 
-def read_book(book, opening_moves, game, line, depth):
-    engine_depth = settings.config.getint('gui', 'depth')
-    max_depth = engine_depth if engine_depth > 0 else 5
-
-    if depth >= max_depth:
-        opening_moves.append(line)
+def read_book(book, opening_moves, game, line, response):
+    if not Path(book).is_file():
         return
-
     eol = True
     with chess.polyglot.open_reader(book) as reader:
-        if depth < settings.config.getint('gui', 'multipv'):
-            for entry in reader.find_all(game.board):
-                eol = False
-                new_line = line.copy()
-                new_line.append(entry)
-                game.board.push(entry.move)
-                read_book(book, opening_moves, game, new_line, depth + 1)
-                game.board.pop()
-        else:
+        for entry in reader.find_all(game.board, minimum_weight=0):
             eol = False
-            try:
-                entry = reader.find(game.board)
-                new_line = line.copy()
-                new_line.append(entry)
+            new_line = line.copy()
+            new_line.append(entry)
+            if response:
+                opening_moves.append(new_line)
+            else:
                 game.board.push(entry.move)
-                read_book(book, opening_moves, game, new_line, depth + 1)
+                read_book(book, opening_moves, game, new_line, True)
                 game.board.pop()
-            except Exception:
-                pass
     if eol and len(line) > 0:
-        opening_moves.append(line)
+       opening_moves.append(line)
 
 
 async def close_engine(game):
@@ -130,72 +123,111 @@ async def run_engine(uid, ws):
             except Exception:
                 pass
         # Look for opening moves from books
-        found_book_move = False
         opening_moves = []
-
-        if settings.config.has_option('gui', 'bookfile'):
-            book = settings.config.get('gui', 'bookfile')
-            if Path(book).is_file():
+        bookfiles = ['bookfile', 'bookfile2', 'bookfile3', 'bookfile4']
+        for bookfile in bookfiles:
+            if settings.config.has_option('gui', bookfile):
+                book = settings.config.get('gui', bookfile)
                 read_book(book, opening_moves, game, [], 0)
-                found_book_move = len(opening_moves) > 0
 
-        if not found_book_move and settings.config.has_option('gui', 'bookfile2'):
-            book = settings.config.get('gui', 'bookfile2')
-            if Path(book).is_file():
-                read_book(book, opening_moves, game, [], 0)
-                found_book_move = len(opening_moves) > 0
-
-        if found_book_move:
+        if len(opening_moves) > 0:
             opening_moves = sorted(opening_moves, key=lambda x: sum([y.weight for y in x]), reverse=True)
             best_move = game.board.san(opening_moves[0][0].move)
-            multipv = []
-            for list_index, movelist in enumerate(opening_moves):
-                score = 0
-                pv = []
-                # Calculate avg. weight of the line and append all the SAN moves
-                for entry_index, entry in enumerate(movelist):
-                    pv.append(game.board.san(entry.move))
-                    arrow = drawing.get_arrow(entry.move, game.board.turn, entry_index // 2)
-                    game.arrows[list_index + 1].append(arrow)
-                    game.board.push(entry.move)
-                    score += entry.weight
-                # Unwind the move stack
-                for _ in range(len(pv)):
-                    game.board.pop()
-                line = {'multipv': list_index + 1, 'score': round(score / len(pv), 0), 'pv': pv}
-                multipv.append(line)
+            opening_dict = defaultdict(list)
 
-            # multipv = sorted(multipv, key=lambda x: x['score'], reverse=True)
-            await ws.send(serialize_message('multipv', multipv))
+            for move, *reply in opening_moves:
+                reply = reply[0] if len(reply) > 0 else None
+                raw_keys = [x.raw_move for x in opening_dict]
+                raw_key = move.raw_move
+
+                # If the raw has already been added
+                if (raw_key in raw_keys):
+                    # No need to do anything if there is no reply anyway
+                    if reply:
+                        # Find the raw move and append reply to there instead
+                        existing_key = None
+                        for key in opening_dict:
+                            if key.raw_move == raw_key:
+                                existing_key = key
+                        if (existing_key):
+                            # Check if the list contains raw_move of the reply already
+                            raw_moves = [x.raw_move for x in opening_dict[existing_key]]
+                            raw_move = reply.raw_move
+                            if (raw_move not in raw_moves):
+                                opening_dict[key].append(reply)
+                else:
+                    if reply:
+                        opening_dict[move].append(reply)
+                    else:
+                        opening_dict[move] = []
+
+            multi_pv = []
+            list_index = 0
+            for move, replies in opening_dict.items():
+                list_index += 1
+                score = move.weight
+                pv = []
+                pv.append(game.board.san(move.move))
+                arrow = drawing.get_arrow(move.move, game.board.turn, 0)
+                game.arrows[list_index].append(arrow)
+                game.board.push(move.move)
+                epd_board = game.board.copy()
+                opponents_turn = game.board.turn
+                for reply in replies:
+                    pv.append(game.board.san(reply.move))
+                    arrow = drawing.get_arrow(reply.move, opponents_turn, 1)
+                    game.arrows[list_index].append(arrow)
+                # Unwind the move stack
+                game.board.pop()
+                epd = epd_board.epd()
+                line = {
+                    'multipv': list_index,
+                    'score': score,
+                    'pv': pv,
+                    'eco': eco.get_name(epd)
+                }
+
+                multi_pv.append(line)
+            await ws.send(serialize_message('multipv', multi_pv))
         else:
             # If there no opening moves were found, use engine to analyse instead
-            multipv = settings.config.getint('gui', 'multipv')
+            multi_pv = settings.config.getint('gui', 'multipv')
             results = await game.engine.analyse(
                 board=game.board,
                 limit=limit,
-                multipv=multipv,
+                multipv=multi_pv,
                 game=uid,
                 info=chess.engine.INFO_ALL,
             )
             best_move = game.board.san(results[0].pv[0])
             multipv_data = []
-            for multipv in results:
+            for multi_pv in results:
                 move_counter = 0
                 pv = []
-                for move in multipv.pv:
+                epd_board = None
+                for index, move in enumerate(multi_pv.pv):
                     san = game.board.san(move)
                     arrow = drawing.get_arrow(move, game.board.turn, move_counter // 2)
-                    game.arrows[multipv.multipv].append(arrow)
+                    game.arrows[multi_pv.multipv].append(arrow)
                     pv.append(san)
                     game.board.push(move)
+                    if index == 0:
+                        epd_board = game.board.copy()
                     move_counter += 1
                 for i in range(move_counter):
                     game.board.pop()
-                if multipv.score.is_mate():
-                    score = '#' + str(multipv.score.relative.moves)
+                if multi_pv.score.is_mate():
+                    score = '#' + str(multi_pv.score.relative.moves)
                 else:
-                    score = multipv.score.relative.cp
-                unit = {'multipv': multipv.multipv, "pv": pv, "score": score}
+                    score = multi_pv.score.relative.cp
+
+                epd = epd_board.epd()
+                unit = {
+                    'multipv': multi_pv.multipv,
+                    'pv': pv,
+                    'score': score,
+                    'eco': eco.get_name(epd)
+                }
                 multipv_data.append(unit)
             await ws.send(serialize_message("multipv", multipv_data))
         print('Best move:', best_move)
