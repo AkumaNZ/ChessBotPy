@@ -124,6 +124,8 @@ I've included two opening books `1_gm2600` and `2_Elo2400`, provided by the ches
 
 The book files are read in alphabetical order, so I've named them with a prefix, to make sure the better book is read first.
 
+When an opening book is used, the principle variations shown in the GUI work a little differently, the first move is still correct, but all moves after that are responses from the opponent, rather than continuations from both sides.
+
 The books are read every time the engine runs, so if you want to add/remove books, you can do so at anytime by moving the files into our out of the folder.
 
 Zipproth provides excellent opening books, if you want very deep and extensive books for optimal play: https://zipproth.de/Brainfish/download/
