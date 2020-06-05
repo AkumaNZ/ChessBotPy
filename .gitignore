@@ -130,8 +130,8 @@ dmypy.json
 
 # Chess engine and book files
 /engine
-
 /books/disabled/
+StockFish.ini
 
 # Fucking NPM
 /node_modules

@@ -26,22 +26,94 @@ Copy the contents of js/ChessbotPy.user.js into a new userscript created with th
 
 Next you'll need to run the python script. You can either run the precompiled exe (Windows only, download from the releases tab on GitHub) or run the python script yourself.
 
-Note that you have to be in the root directory, while running any of these scripts.
+### Using the precompiled release:
 
-To run the python script you'll need to activate the virtual environment and install the requirements first.
+1. Open `cmd` in the folder you extracted the files to
+2. Run chessbotpy.exe
 
-Activate the venv by running the `venv\Scripts\activate.bat` on Windows or `source ./venv/Scripts/activate` on Linux
+The included engine is a dev build of Stockfish (bmi2) from 6.6.2020, if this does not work for you, keep reading.
 
-Now install the requirements with `python -m pip install requirements.txt` (This needs to be done only the first time)
+Read on if you want to know about engines, settings, opening books, end game tables, etc.
+
+### Running the python script yourself:
+
+Everything here was tested with Python 3.8.3, I can't guarantee that any other versions will work.
+
+Note that you have to be in the **root directory** of the project, while running any of these scripts.
+
+To run the python script you'll need to install the requirements first.
+
+**Windows:**
+
+You may want to create a virtual environment first, where all the python dependencies will be installed, so they don't clutter your global space.
+
+You can do this by running:
+
+`python -m venv venv`
+
+The venv can be activated by running
+
+`venv\Scripts\activate.bat` (This needs to be done every time you want to run the program if you installed the requirements with the venv)
+
+Now install the requirements with `python -m pip install -r requirements.txt` (This needs to be done only the first time)
+
+Now you need to download an engine. I recommend downloading the latest version of Stockfish from:  
+https://blog.abrok.eu/stockfish-dev-builds-faq/
+
+Make sure to get a version that works with your machine. You can also use other UCI based engines.
+
+Install the engine to a a folder called `engine` and name the file StockFish.exe in the project root directory
 
 Now you can run the python script with `python python\main.py`
 
-**You need to setup your chess engine path in the settings.ini before trying to run the program.**
+**If your engine is not in a folder called engine in the root directory or the name is not StockFish.exe, you need to setup the path in the settings.ini file**
 
-After the first time, this can be changed directly with the web client GUI.
+Later the engine path can also be set in the web client GUI, once you can get the program running.
 
-I recommend downloading the latest version of Stockfish from:
+**Linux:**
+
+Note that I've only ever tested this with WSL (Windows Subsystem for Linux), so I don't know how well it will really work.
+
+With linux you will need to install a package called espeak, if you want voice to work: `sudo apt install espeak`
+
+You may want to create a virtual environment first, where all the python dependencies will be installed, so they don't clutter your global space.
+
+First make sure you have pip and venv installed by running (and python3 obviously)
+
+`sudo apt install python3-pip`
+
+and
+
+`sudo apt install python3-venv`
+
+You can do this by running:
+
+`python3 -m venv venv`
+
+The venv can be activated by running
+
+`source ./venv/bin/activate` (This needs to be done every time you want to run the program if you installed the requirements with the venv)
+
+Now install the requirements with `python3 -m pip install -r requirements.txt` (This needs to be done only the first time)
+
+Now you need to download an engine. I recommend downloading the latest version of Stockfish from:  
 https://blog.abrok.eu/stockfish-dev-builds-faq/
+
+For example:
+
+`mkdir engine`
+
+`wget -P ./engine http://abrok.eu/stockfish/latest/linux/stockfish_x64_bmi2 -o stockfish`
+
+`sudo chmod 777 ./engine/stockfish`
+
+Make sure to get a version that works with your machine. You can also use other UCI based engines.
+
+Next you need to set the correct engine_path in the settings.ini file.
+
+Edit the settings.ini and set the engine_path to `./engine/stockfish`
+
+Later the engine path can also be set in the web client GUI, once you can get the program running.
 
 
 ### **Opening books**
@@ -56,19 +128,19 @@ The books are read every time the engine runs, so if you want to add/remove book
 
 Zipproth provides excellent opening books, if you want very deep and extensive books for optimal play: https://zipproth.de/Brainfish/download/
 
-Note: You do not need the brainfish engine to use these books.
+Note: You do not need the Brainfish engine to use these books.
 
 ### Syzygy end game tables
 
 You can read about and download syzygy end game tables from:
 https://syzygy-tables.info/
 
-Note that these are not used directly with this program, but rather with the engine. So you can set the directories for the syzygy files in the engine settings (Through the web client GUI)
+Note that these are not used directly with this program, but rather with the engine. So you can set the directories for the syzygy files in the engine settings (Through the web client GUI). Note that multiple directories can be set, if the paths are separated by `;`
 
 ## Build and development
 
 To build a single executable, run
-`pyinstaller.exe --hidden-import=pyttsx3.drivers --hidden-import=pyttsx3.drivers.sapi5 --onefile chessbotpy/main.py`
+`pyinstaller.exe --hidden-import=pyttsx3.drivers --hidden-import=pyttsx3.drivers.sapi5 --onefile python/main.py`
 
 To build a minified version of tailwind, run
 `npm run build:css` and in css/tailwind.min.css, replace all backslashes `\` with double backslashes `\\`
