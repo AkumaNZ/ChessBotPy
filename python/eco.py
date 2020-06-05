@@ -8,7 +8,7 @@ def load_eco(path):
     onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
     for f in onlyfiles:
         full_path = join(path, f)
-        print(full_path)
+        print("Loading eco file:", full_path)
         with open(full_path, encoding="utf-8") as handle:
             for line in handle.readlines():
                 elements = line.split('\t')

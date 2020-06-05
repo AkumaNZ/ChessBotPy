@@ -11,6 +11,7 @@ import settings
 import eco
 import voice
 import drawing
+import books
 
 try:
     eco.load_eco('eco')
@@ -63,8 +64,6 @@ class GameObject():
 
 
 def read_book(book, opening_moves, game, line, response):
-    if not Path(book).is_file():
-        return
     eol = True
     with chess.polyglot.open_reader(book) as reader:
         for entry in reader.find_all(game.board, minimum_weight=0):
@@ -124,11 +123,10 @@ async def run_engine(uid, ws):
                 pass
         # Look for opening moves from books
         opening_moves = []
-        bookfiles = ['bookfile', 'bookfile2', 'bookfile3', 'bookfile4']
-        for bookfile in bookfiles:
-            if settings.config.has_option('gui', bookfile):
-                book = settings.config.get('gui', bookfile)
-                read_book(book, opening_moves, game, [], 0)
+        if settings.config.getboolean('gui', 'use_book'):
+            bookfiles = books.load_books('books')
+            for bookfile in bookfiles:
+                read_book(bookfile, opening_moves, game, [], 0)
 
         if len(opening_moves) > 0:
             opening_moves = sorted(opening_moves, key=lambda x: sum([y.weight for y in x]), reverse=True)

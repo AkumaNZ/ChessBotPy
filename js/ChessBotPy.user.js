@@ -6,7 +6,7 @@
 // @match       *://chess24.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
-// @version     2.3
+// @version     3.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -208,8 +208,7 @@ const main = async () => {
 		grid-template-areas:
 			"board"
 			"pvs"
-			"main"
-			"engine"
+			"settings"
 	}
 
 	@media (min-width: 1280px) {
@@ -217,13 +216,13 @@ const main = async () => {
 			grid-template-columns: 2fr 3fr;
 			grid-template-rows: 67fr 33fr;
 			grid-template-areas:
-				"main board"
-				"engine pvs";
+				"settings board"
+				"settings pvs";
 		}
 	}
 
-	#main {
-		grid-area: main;
+	#settings {
+		grid-area: settings;
 	}
 
 	#board {
@@ -241,10 +240,6 @@ const main = async () => {
 
 	#board-container {
 		height: 65vh;
-	}
-
-	#settings {
-		grid-area: engine;
 	}
 
 	#pvs {
@@ -330,175 +325,217 @@ const main = async () => {
 	body.innerHTML = `
 	<div id="app" class="font-sans text-gray-100">
 		<div id="layout">
-			<div id="main" class="bg-gray-800 p-3 lg:overflow-y-auto">
-				<div class='inline-flex flex-col'>
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Status</span>
-						<label class="checkbox inline-flex cursor-pointer relative mb-2">
-							<input 
-								type="checkbox" name="running" v-model="running" @change="handleSettingChange($event, 'running', 'checkbox')"
-								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
-							>
-							<span class="ml-2" :title=" running ? 'ALT + S' : 'ALT + A'">{{ running ? 'Running' : 'Paused' }}</span>
-						</label>
+			<div id="settings" class="bg-gray-800 p-3 lg:overflow-y-auto">
+				<div>
+					<div class='inline-flex flex-col'>
+						<div class="inline-flex flex-col mr-10 mb-4">
+							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Status</span>
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input 
+									type="checkbox" name="running" v-model="running" @change="handleSettingChange($event, 'running', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" :title=" running ? 'ALT + S' : 'ALT + A'">{{ running ? 'Running' : 'Paused' }}</span>
+							</label>
+						</div>
+
+						<div class="inline-flex flex-col mr-10 mb-4">
+							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
+							<label class="radio inline-flex cursor-pointer relative mb-2">
+								<input 
+									type="radio" name="side" value="1" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
+									class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="ALT + W">White</span>
+							</label>
+							<label class="radio inline-flex cursor-pointer relative mb-2">
+								<input 
+									type="radio" name="side" value="0" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
+									class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="ALT + Q">Black</span>
+							</label>
+						</div>
+
+						<div class="inline-flex flex-col mr-10 mb-4">
+							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Run engine for</span>
+							<label class="radio inline-flex cursor-pointer relative mb-2">
+								<input
+									type="radio" name="run-engine" value="0" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
+									class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2">Me</span>
+							</label>
+							<label class="radio inline-flex cursor-pointer relative mb-2">
+								<input
+									type="radio" name="run-engine" value="1" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
+									class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2">Opponent</span>
+							</label>
+							<label class="radio inline-flex cursor-pointer relative mb-2">
+								<input
+									type="radio" name="run-engine" value="2" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
+									class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2">Both</span>
+							</label>
+						</div>
 					</div>
 
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Playing as</span>
-						<label class="radio inline-flex cursor-pointer relative mb-2">
-							<input 
-								type="radio" name="side" value="1" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
-								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+					<div class='inline-flex flex-col'>
+						<div class="inline-flex flex-col mr-10 mb-4">
+							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="useDepth" @change="handleSettingChange($event, 'use_depth', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2">Depth {{ depth }}</span>
+							</label>
+							<input
+								type="range" min="0" max="25" v-model.number="depth" @change="handleSettingChange($event, 'depth', 'int')"
+								class="slider w-48 appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 							>
-							<span class="ml-2" title="ALT + W">White</span>
-						</label>
-						<label class="radio inline-flex cursor-pointer relative mb-2">
-							<input 
-								type="radio" name="side" value="0" v-model.number="playingAs" @change="handleSettingChange($event, 'side', 'int')"
-								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="useTime" @change="handleSettingChange($event, 'use_time', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2">Time {{ time }}</span>
+							</label>
+							<input
+								type="range" min="0" max="60" step="0.1" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
+								class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 							>
-							<span class="ml-2" title="ALT + Q">Black</span>
-						</label>
+						</div>
+
+						<div class="flex flex-col mr-10 mb-4">
+							<span class="w-48 text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Principal variations</span>
+							<label class="mb-2">
+								PV {{ multipv }}
+							</label>
+							<input
+								type="range" min="1" max="16" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
+								class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
+							>
+						</div>
 					</div>
 
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Run engine for</span>
-						<label class="radio inline-flex cursor-pointer relative mb-2">
+					<div class='inline-flex flex-col'>
+						<div class="inline-flex flex-col mr-10 mb-4">
+							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
 							<input
-								type="radio" name="run-engine" value="0" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
-								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
+								type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
+								class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 							>
-							<span class="ml-2">Me</span>
-						</label>
-						<label class="radio inline-flex cursor-pointer relative mb-2">
-							<input
-								type="radio" name="run-engine" value="1" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
-								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
-							>
-							<span class="ml-2">Opponent</span>
-						</label>
-						<label class="radio inline-flex cursor-pointer relative mb-2">
-							<input
-								type="radio" name="run-engine" value="2" v-model.number="runEngineFor" @change="handleSettingChange($event, 'run', 'int')"
-								class="w-6 h-6 bg-gray-900 rounded-full cursor-pointer outline-none appearance-none"
-							>
-							<span class="ml-2">Both</span>
-						</label>
+						</div>
+
+						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Misc settings</span>
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="drawBoard" @change="handleSettingChange($event, 'draw_board', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Draw the SVG board with suggested moves">Draw board</span>
+							</label>
+						</div>
+
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="useVoice" @change="handleSettingChange($event, 'use_voice', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Read the best move out loud">Enable voice</span>
+							</label>
+						</div>
+
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="logEngine" @change="handleSettingChange($event, 'clear_log', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Clear engine debug log each time before engine is ran">Clear log</span>
+							</label>
+						</div>
+
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="useBook" @change="handleSettingChange($event, 'use_book', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Load opening book files from 'books' folder">Use opening books</span>
+							</label>
+						</div>
 					</div>
 				</div>
+				<div>
+					<h1 class="text-4xl font-display text-gray-200">Engine settings</h1>
+					<div v-for="setting in engineSettings" class="mb-4">
 
-				<div class='inline-flex flex-col'>
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
-						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+						<div class="text-gray-500 font-display font-bold text-xs uppercase tracking-wide mb-2">{{ setting.name }}</div>
+
+						<span v-if="setting.type === 'spin'">
 							<input
-								type="checkbox" v-model="useDepth" @change="handleSettingChange($event, 'use_depth', 'checkbox')"
-								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								type="range" :min="setting.min" :max="setting.max" v-model.number="setting.value"
+								class="slider appearance-none w-64 bg-gray-900 outline-none h-3 rounded-full mb-4"
+								@change="handleEngineSettingChange(setting.name, setting.value)"
 							>
-							<span class="ml-2">Depth {{ depth }}</span>
-						</label>
-						<input
-							type="range" min="0" max="25" v-model.number="depth" @change="handleSettingChange($event, 'depth', 'int')"
-							class="slider w-48 appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
-						>
-						<label class="checkbox inline-flex cursor-pointer relative mb-2">
+							<span class="text-sm ml-2">{{ setting.value }}</span> <span class="text-sm text-gray-600"> ({{ setting.default }})</span>
+						</span>
+
+						<span v-else-if="setting.type === 'combo'">
+							<div class="inline-block relative w-64">
+								<select 
+									v-model="setting.value"
+									@change="handleEngineSettingChange(setting.name, setting.value)"
+									class="block appearance-none w-full bg-gray-700 px-4 py-2 pr-8 rounded border-2 border-gray-700 focus:outline-none focus:border-indigo-500"
+								>
+									<option v-for="opt in setting.var">{{opt}}</option>
+								</select>
+								<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+									<svg class="fill-current text-white h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+								</div>
+							</div>
+						</span>
+
+						<span v-else-if="setting.type === 'string'">
 							<input
-								type="checkbox" v-model="useTime" @change="handleSettingChange($event, 'use_time', 'checkbox')"
-								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								type="text" v-model="setting.value" :title="setting.value"
+								@change="handleEngineSettingChange(setting.name, setting.value)"
+								class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 mb-4 focus:outline-none focus:border-indigo-500"
 							>
-							<span class="ml-2">Time {{ time }}</span>
-						</label>
-						<input
-							type="range" min="0" max="60" step="0.1" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
-							class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
-						>
-					</div>
+							<span class="text-sm text-gray-600 ml-2"> ({{ setting.default }})</span>
+						</span>
 
-					<div class="flex flex-col mr-10 mb-4">
-						<span class="w-48 text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Principal variations</span>
-						<label class="mb-2">
-							PV {{ multipv }}
-						</label>
-						<input
-							type="range" min="1" max="10" v-model.number="multipv" @change="handleSettingChange($event, 'multipv', 'int')"
-							class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
-						>
-					</div>
-				</div>
+						<span v-else-if="setting.type === 'check'">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="setting.value" true-value="True" false-value="False"
+									@change="handleEngineSettingChange(setting.name, setting.value)"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2">{{ setting.value.toString().toLowerCase() == 'true' ? 'Enabled' : 'Disabled' }}</span>
+							</label>
+						</span>
 
-				<div class='inline-flex flex-col'>
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
-						<input
-							type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
-							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-						>
-					</div>
-
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book</span>
-						<input
-							type="text" v-model="book1" @change="handleSettingChange($event, 'bookfile', 'path')" :title="book1"
-							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-						>
-					</div>
-
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 2</span>
-						<input
-							type="text" v-model="book2" @change="handleSettingChange($event, 'bookfile2', 'path')" :title="book2"
-							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-						>
-					</div>
-
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 3</span>
-						<input
-							type="text" v-model="book3" @change="handleSettingChange($event, 'bookfile3', 'path')" :title="book3"
-							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-						>
-					</div>
-
-					<div class="inline-flex flex-col mr-10 mb-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Opening book 4</span>
-						<input
-							type="text" v-model="book4" @change="handleSettingChange($event, 'bookfile4', 'path')" :title="book4"
-							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-						>
-					</div>
-				</div>
-				<div class='flex'>
-					<div class="inline-flex flex-col mb-4 mr-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Board</span>
-						<label class="checkbox inline-flex cursor-pointer relative mb-2">
-							<input
-								type="checkbox" v-model="drawBoard" @change="handleSettingChange($event, 'draw_board', 'checkbox')"
-								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+						<span v-else-if="setting.type === 'button'">
+							<button
+								class="bg-indigo-500 w-64 hover:bg-indigo-600 text-white py-2 px-4 rounded"
+								@click='handleButton(setting.name)'
 							>
-							<span class="ml-2">Draw board</span>
-						</label>
-					</div>
+								{{ setting.name }}
+							</button>
+						</span>
 
-					<div class="inline-flex flex-col mb-4 mr-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Voice</span>
-						<label class="checkbox inline-flex cursor-pointer relative mb-2">
-							<input
-								type="checkbox" v-model="useVoice" @change="handleSettingChange($event, 'use_voice', 'checkbox')"
-								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
-							>
-							<span class="ml-2">Enable voice</span>
-						</label>
-					</div>
+						<span v-else class="mb-5">
+							{{ setting.type }} ???
+						</span>
 
-					<div class="inline-flex flex-col mb-4 mr-4">
-						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engline log</span>
-						<label class="checkbox inline-flex cursor-pointer relative mb-2">
-							<input
-								type="checkbox" v-model="logEngine" @change="handleSettingChange($event, 'clear_log', 'checkbox')"
-								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
-							>
-							<span class="ml-2" title="Clear log each time before engine is ran">Clear log</span>
-						</label>
 					</div>
 				</div>
 			</div>
@@ -532,73 +569,6 @@ const main = async () => {
 					</div>
 				</div>
 			</div>
-
-			<div id="settings" class="bg-gray-800 p-3 lg:overflow-y-auto">
-				<h1 class="text-4xl font-display text-gray-200">Engine settings</h1>
-				<div v-for="setting in engineSettings" class="mb-4">
-
-					<div class="text-gray-500 font-display font-bold text-xs uppercase tracking-wide mb-2">{{ setting.name }}</div>
-
-					<span v-if="setting.type === 'spin'">
-						<input
-							type="range" :min="setting.min" :max="setting.max" v-model.number="setting.value"
-							class="slider appearance-none w-64 bg-gray-900 outline-none h-3 rounded-full mb-4"
-							@change="handleEngineSettingChange(setting.name, setting.value)"
-						>
-						<span class="text-sm ml-2">{{ setting.value }}</span> <span class="text-sm text-gray-600"> ({{ setting.default }})</span>
-					</span>
-
-					<span v-else-if="setting.type === 'combo'">
-						<div class="inline-block relative w-64">
-							<select 
-								v-model="setting.value"
-								@change="handleEngineSettingChange(setting.name, setting.value)"
-								class="block appearance-none w-full bg-gray-700 px-4 py-2 pr-8 rounded border-2 border-gray-700 focus:outline-none focus:border-indigo-500"
-							>
-								<option v-for="opt in setting.var">{{opt}}</option>
-							</select>
-							<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-								<svg class="fill-current text-white h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-							</div>
-						</div>
-					</span>
-
-					<span v-else-if="setting.type === 'string'">
-						<input
-							type="text" v-model="setting.value" :title="setting.value"
-							@change="handleEngineSettingChange(setting.name, setting.value)"
-							class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 mb-4 focus:outline-none focus:border-indigo-500"
-						>
-						<span class="text-sm text-gray-600 ml-2"> ({{ setting.default }})</span>
-					</span>
-
-					<span v-else-if="setting.type === 'check'">
-						<label class="checkbox inline-flex cursor-pointer relative mb-2">
-							<input
-								type="checkbox" v-model="setting.value" true-value="True" false-value="False"
-								@change="handleEngineSettingChange(setting.name, setting.value)"
-								class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
-							>
-							<span class="ml-2">{{ setting.value.toString().toLowerCase() == 'true' ? 'Enabled' : 'Disabled' }}</span>
-						</label>
-					</span>
-
-					<span v-else-if="setting.type === 'button'">
-						<button
-							class="bg-indigo-500 w-64 hover:bg-indigo-600 text-white py-2 px-4 rounded"
-							@click='handleButton(setting.name)'
-						>
-							{{ setting.name }}
-						</button>
-					</span>
-
-					<span v-else class="mb-5">
-						{{ setting.type }} ???
-					</span>
-
-				</div>
-			</label>
-			</div>
 		</div>
 	</div>`;
 
@@ -623,6 +593,7 @@ const main = async () => {
 			book3: '',
 			book4: '',
 			logEngine: '',
+			useBook: '',
 			pvs: [],
 			selectedPV: 1,
 			running: true,

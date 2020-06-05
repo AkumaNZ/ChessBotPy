@@ -85,8 +85,5 @@ def get_mapped_settings():
     yield {'key': 'multipv', 'value': config.getint('gui', 'multipv')}
     yield {'key': 'useTime', 'value': config.getboolean('gui', 'use_time')}
     yield {'key': 'time', 'value': config.getfloat('gui', 'time')}
-    yield {'key': 'book1', 'value': config.get('gui', 'bookfile')}
-    yield {'key': 'book2', 'value': config.get('gui', 'bookfile2')}
-    yield {'key': 'book3', 'value': config.get('gui', 'bookfile3')}
-    yield {'key': 'book4', 'value': config.get('gui', 'bookfile4')}
     yield {'key': 'logEngine', 'value': config.getboolean('gui', 'clear_log')}
+    yield {'key': 'useBook', 'value': config.getboolean('gui', 'use_book')}

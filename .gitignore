@@ -128,8 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Chess engine stuff
+# Chess engine and book files
 /engine
+
+/books/disabled/
 
 # Fucking NPM
 /node_modules
