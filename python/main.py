@@ -111,10 +111,16 @@ async def run_engine(uid, ws):
         game.arrows.clear()
         # print(game.board)
         limit: chess.engine.Limit = chess.engine.Limit()
-        if settings.config.getboolean('gui', 'use_depth'):
+        use_depth = settings.config.getboolean('gui', 'use_depth')
+        use_time = settings.config.getboolean('gui', 'use_time')
+        if use_depth:
             limit.depth = settings.config.getint('gui', 'depth')
-        if settings.config.getboolean('gui', 'use_time'):
+        if use_time:
             limit.time = settings.config.getfloat('gui', 'time')
+        
+        if not use_depth and not use_time:
+            limit.depth = 8
+            await ws.send(serialize_message('error', 'No limit set, using default depth of 8'))
 
         if settings.config.getboolean('gui', 'clear_log'):
             try:
@@ -195,6 +201,7 @@ async def run_engine(uid, ws):
         else:
             # If there no opening moves were found, use engine to analyse instead
             multi_pv = settings.config.getint('gui', 'multipv')
+            print("Starting analysis with limit", limit, "for", multi_pv, "pv(s)")
             results = await game.engine.analyse(
                 board=game.board,
                 limit=limit,

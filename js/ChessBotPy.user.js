@@ -45,7 +45,7 @@ let siteMap = {
 		observerTarget:
 			'.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
 		sanTarget: '.move-text-component, .gotomove, .move-list-controls-move',
-		boardTarget: '.chess-board-container',
+		boardTarget: '#chessboard_boardarea, .board-layout-chessboard, .board-board',
 		sideFinder: () => doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE,
 	},
 
@@ -194,17 +194,18 @@ function drawOnScreen() {
 	overlay.style.left = left + "px";
 	overlay.style.width = width + "px";
 	overlay.style.gridTemplateAreas = generateGridAreas();
-	var turn = app.pvs[0].turn;
+
+	var turn = app.pvs[0] ? app.pvs[0].turn : 0;
 	var lanMoves = app.pvs.map(x => x.lan);
 	var lanPV = lanMoves[app.selectedPV - 1];
 
 	// If Im playing as black, and it's my turn, then draw as black
 
-	if (lanPV.length > 0) {
+	if (lanPV && lanPV.length > 0) {
 		drawBox(overlay, lanPV[0], +turn, width, height)
 	}
 
-	if (lanPV.length > 1) {
+	if (lanPV && lanPV.length > 1) {
 		drawBox(overlay, lanPV[1], (+turn + 1) % 2, width, height)
 	}
 
@@ -215,9 +216,20 @@ const findGame = async () => {
 	await waitForElement(siteMap[host].sanTarget, 1);
 	// Get the side you're plaing as
 	updateSide();
+	let boardSize = 0;
 	console.log('Starting loop');
 	while (true) {
 		await sleep(50);
+
+		// Force resizing because sometimes elements are dynamic and event listeners get broken
+		let boardElement = doc.querySelector(siteMap[host].boardTarget);
+		if (boardElement) {
+			let newBoardSize = boardElement.getBoundingClientRect().width;
+			if (newBoardSize != boardSize) {
+				boardSize = newBoardSize;
+				drawOnScreen();
+			}
+		}
 		// Handle getting FEN directly
 		if (host === 'lichess.org') {
 			let fenput = doc.querySelector('.analyse__underboard__fen');
@@ -319,7 +331,7 @@ const main = async () => {
 
 	@media (min-width: 1280px) {
 		#layout {
-			grid-template-columns: 2fr 3fr;
+			grid-template-columns: 42fr 58fr;
 			grid-template-rows: 67fr 33fr;
 			grid-template-areas:
 				"settings board"
@@ -502,8 +514,8 @@ const main = async () => {
 								<span class="ml-2">Depth {{ depth }}</span>
 							</label>
 							<input
-								type="range" min="0" max="25" v-model.number="depth" @change="handleSettingChange($event, 'depth', 'int')"
-								class="slider w-48 appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
+								type="range" min="1" max="30" v-model.number="depth" @change="handleSettingChange($event, 'depth', 'int')"
+								class="slider w-64 appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 							>
 							<label class="checkbox inline-flex cursor-pointer relative mb-2">
 								<input
@@ -513,7 +525,7 @@ const main = async () => {
 								<span class="ml-2">Time {{ time }}</span>
 							</label>
 							<input
-								type="range" min="0" max="60" step="0.1" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
+								type="range" min="0.01" max="30" step="0.01" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
 								class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 							>
 						</div>
@@ -531,7 +543,7 @@ const main = async () => {
 					</div>
 
 					<div class='inline-flex flex-col'>
-						<div class="inline-flex flex-col mr-10 mb-4">
+						<div class="inline-flex flex-col mb-4">
 							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
 							<input
 								type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
@@ -701,7 +713,7 @@ const main = async () => {
 			useDepth: true,
 			depth: 8,
 			useTime: false,
-			time: 0.0,
+			time: 1.0,
 			engineSettings: [],
 			drawBoard: true,
 			useVoice: true,
@@ -795,12 +807,6 @@ const main = async () => {
 		ws.send(JSON.stringify({ type: 'visibility', data: !doc.hidden }));
 		console.log(`Game ${doc.hidden ? 'Page is hidden' : 'Page is visible'}`);
 	});
-
-	window.opener.addEventListener('resize', drawOnScreen);
-	var boardElement = siteMap[host].boardTarget;
-	if (boardElement) {
-		doc.querySelector(siteMap[host].boardTarget).addEventListener("resize", drawOnScreen);
-	}
 
 	doc.addEventListener('keydown', hotkey);
 	await findGame();
