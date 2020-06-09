@@ -6,7 +6,7 @@
 // @match       *://chess24.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
-// @version     3.0
+// @version     4.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -27,55 +27,35 @@ if (host === 'www.chess.com') {
 	window.document.domain = 'chess.com';
 }
 
-function findSideLichess() {
-	let side = doc.querySelector('.orientation-white') != null ? WHITE : BLACK;
-	return side;
-}
-
-function findSideChessDotCom() {
-	let side = WHITE;
-	let turnElement = doc.querySelector('.board-player-default-bottom.board-player-default-black');
-	if (turnElement != null) {
-		side = BLACK;
-	}
-	return side;
-}
-
-function findSideChess24() {
-	let side = WHITE;
-	let turnElement = doc.querySelector('.bottom .playerInfo.black');
-	if (turnElement != null) {
-		side = BLACK;
-	}
-	return side;
-}
-
-let siteMap = {
-	'lichess.org': {
-		observerTarget: '.rmoves, .tview2',
-		sanTarget: 'm2, move',
-		sideFinder: findSideLichess,
-	},
-	'www.chess.com': {
-		observerTarget:
-			'.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
-		sanTarget: '.move-text-component, .gotomove, .move-list-controls-move',
-		sideFinder: findSideChessDotCom,
-	},
-
-	'chess24.com': {
-		observerTarget: '.Moves',
-		sanTarget: '.move',
-		sideFinder: findSideChess24,
-	},
-};
-
 // A new window is opened to allow a websocket connection, since the main page has a restricted CSP
 // this is just an alias to the document object of the main window
 let doc = window.document;
 if (window.opener != null) {
 	doc = window.opener.document;
 }
+
+let siteMap = {
+	'lichess.org': {
+		observerTarget: '.rmoves, .tview2',
+		sanTarget: 'm2, move',
+		boardTarget: '.cg-wrap',
+		sideFinder: () => doc.querySelector('.orientation-white') != null ? WHITE : BLACK,
+	},
+	'www.chess.com': {
+		observerTarget:
+			'.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
+		sanTarget: '.move-text-component, .gotomove, .move-list-controls-move',
+		boardTarget: '.chess-board-container',
+		sideFinder: () => doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE,
+	},
+
+	'chess24.com': {
+		observerTarget: '.Moves',
+		sanTarget: '.move',
+		boardTarget: '.chess-board > .svg',
+		sideFinder: () => doc.querySelector('.bottom .playerInfo.black') != null ? BLACK : WHITE,
+	},
+};
 
 function uuidv4() {
 	return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
@@ -84,39 +64,161 @@ function uuidv4() {
 }
 
 function hotkey(e) {
-	if (e.altKey && e.code === 'KeyW') {
-		console.log('Playing as white');
-		app.playingAs = 1;
-		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 1 } }));
-	} else if (e.altKey && e.code === 'KeyQ') {
-		console.log('Playing as black');
-		app.playingAs = 0;
-		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
-	} else if (e.altKey && e.code === 'KeyA') {
-		console.log('Resuming');
-		app.running = true;
-		ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: true } }));
-	} else if (e.altKey && e.code === 'KeyS') {
-		console.log('Stopping');
-		app.running = false;
-		ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: false } }));
+	if (!e.altKey) {
+		return;
+	}
+	switch (e.code) {
+		case 'KeyW':
+			console.log('Playing as white');
+			app.playingAs = 1;
+			ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 1 } }));
+			break;
+		case 'KeyQ':
+			console.log('Playing as black');
+			app.playingAs = 0;
+			ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
+		case 'KeyA':
+			console.log('Resuming');
+			app.running = true;
+			ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: true } }));
+		case 'KeyS':
+			console.log('Stopping');
+			app.running = false;
+			ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: false } }));
+		default:
+			break;
 	}
 }
 
-function update_side() {
+function updateSide() {
 	let side = siteMap[host].sideFinder();
 	app.playingAs = side;
 	console.log('Starting as', side == 0 ? 'black' : 'white');
 	ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: side } }));
 }
 
+function range(start, end) {
+	return Array(end - start + 1).fill().map((_, idx) => start + idx)
+  }
+
+function generateGridAreas() {
+	const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+	const ranks = range(1, 8);
+	if (app.playingAs == WHITE) {
+		ranks.reverse();
+	} else {
+		files.reverse();
+	}
+	let gridArea = ``;
+	for (r of ranks) {
+		let gridRow = [];
+		gridArea += '"';
+		for (f of files) {
+			gridRow.push(`${f}${r}`);
+		}
+		gridArea += `${gridRow.join(' ')}" `;
+	}
+	return gridArea;
+}
+
+function parseLAN(LAN) {
+	let moves = LAN.split('-');
+	if (moves.length == 1) {
+		moves = LAN.split('x');
+	}
+
+	[from, to] = moves;
+
+	// Long castles (O-O-O)
+	if (moves.length == 3) {
+		if (app.playingAs == WHITE) {
+			return { from: 'e1', to: 'c1' };
+		}
+		return { from: 'e8', to: 'c8' };
+	}
+
+	// Short castles
+	if (from.toLowerCase() == "o") {
+		if (app.playingAs == WHITE) {
+			return { from: 'e1', to: 'g1' };
+		}
+		return { from: 'e8', to: 'g8' };
+	}
+
+	return { from: from.slice(-2), to: to.slice(0, 2) };
+}
+
+function createBox(square, color, width, height) {
+	var box = document.createElement('div')
+	box.style.width = (width / 8) + 'px';
+	box.style.height = (height / 8) + 'px';
+	box.style.border = `4px solid ${color}`;
+	box.style.pointerEvents = 'none';
+	box.style.gridArea = square;
+	return box;
+}
+
+function drawBox(overlay, move, color, width, height) {
+	colors = {
+		0: ['hsla(350, 100%, 50%, 0.66)', 'hsla(340, 100%, 50%, 0.66)'], // BLACK
+		1: ['hsla(145, 100%, 50%, 0.66)', 'hsla(155, 100%, 50%, 0.66)'], // WHITE
+	};
+	var {from, to} = parseLAN(move);
+	overlay.appendChild(createBox(from, colors[color][0], width, height));
+	overlay.appendChild(createBox(to, colors[color][1], width, height));
+}
+
+function drawOnScreen() {
+	var existing = doc.getElementById("py-overlay");
+	if (existing) {
+		existing.remove();
+	}
+
+	if (!app.drawOverlay) {
+		return;
+	}
+
+	var boardElement = doc.querySelector(siteMap[host].boardTarget);
+	var { width, height, top, left } = boardElement.getBoundingClientRect();
+	var overlay = doc.createElement('div')
+	overlay.id = "py-overlay"
+	overlay.style.display = 'grid';
+	overlay.style.position = 'absolute';
+	overlay.style.zIndex = '99999';
+	overlay.style.pointerEvents = 'none';
+	overlay.style.gridTemplateRows = 'repeat(8, 1fr)';
+	overlay.style.gridTemplateColumns = 'repeat(8, 1fr)';
+	overlay.style.width = width + "px";
+	overlay.style.height = height + "px";
+	overlay.style.top = top + "px";
+	overlay.style.left = left + "px";
+	overlay.style.width = width + "px";
+	overlay.style.gridTemplateAreas = generateGridAreas();
+	var turn = app.pvs[0].turn;
+	var lanMoves = app.pvs.map(x => x.lan);
+	var lanPV = lanMoves[app.selectedPV - 1];
+
+	// If Im playing as black, and it's my turn, then draw as black
+
+	if (lanPV.length > 0) {
+		drawBox(overlay, lanPV[0], +turn, width, height)
+	}
+
+	if (lanPV.length > 1) {
+		drawBox(overlay, lanPV[1], (+turn + 1) % 2, width, height)
+	}
+
+	doc.body.appendChild(overlay);
+}
+
 const findGame = async () => {
 	await waitForElement(siteMap[host].sanTarget, 1);
 	// Get the side you're plaing as
-	update_side();
+	updateSide();
 	console.log('Starting loop');
 	while (true) {
 		await sleep(50);
+		// Handle getting FEN directly
 		if (host === 'lichess.org') {
 			let fenput = doc.querySelector('.analyse__underboard__fen');
 			if (fenput != null) {
@@ -128,12 +230,15 @@ const findGame = async () => {
 				continue;
 			}
 		}
+		// Get moves through SAN
 		let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)]
 			.map(x => x.innerText.trim())
 			.filter(x => x != '');
+	
+		// Number of moves changed, update all the things!
 		if (moves.length != numOfMoves) {
 			if (moves.length < 2) {
-				update_side();
+				updateSide();
 			}
 			numOfMoves = moves.length;
 			console.log('Sending updated moves.');
@@ -198,7 +303,8 @@ const main = async () => {
 
 	// await loadCSS('http://127.0.0.1:8080/dist/tailwind.css');
 	await loadCSS('https://fonts.googleapis.com/css?family=Nunito:400,700|Open+Sans:400,700&display=swap');
-	const styleString = `
+	
+	const styleString = /*css*/`
 	#layout {
 		display: grid;
 		grid-gap: 2px;
@@ -312,6 +418,7 @@ const main = async () => {
 	// Generated tailwindcss goes here
 	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}html{box-sizing:border-box;font-family:sans-serif}*,:after,:before{box-sizing:inherit}h1,pre{margin:0}button{background:transparent;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{border:0 solid #e2e8f0}input::-webkit-input-placeholder{color:#a0aec0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-700{background-color:#4a5568}.bg-gray-800{background-color:#2d3748}.bg-gray-900{background-color:#1a202c}.bg-indigo-500{background-color:#667eea}.hover\\:bg-indigo-600:hover{background-color:#5a67d8}.border-gray-500{border-color:#a0aec0}.border-gray-700{border-color:#4a5568}.border-gray-900{border-color:#1a202c}.border-indigo-500{border-color:#667eea}.hover\\:border-indigo-400:hover{border-color:#7f9cf5}.focus\\:border-indigo-500:focus{border-color:#667eea}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:-webkit-box;display:flex}.inline-flex{display:-webkit-inline-box;display:inline-flex}.hidden{display:none}.flex-row{-webkit-box-direction:normal;flex-direction:row}.flex-row{-webkit-box-orient:horizontal}.flex-col{-webkit-box-orient:vertical;-webkit-box-direction:normal;flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{-webkit-box-align:center;align-items:center}.font-sans{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-10{height:2.5rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{color:#fff}.text-gray-100{color:#f7fafc}.text-gray-200{color:#edf2f7}.text-gray-400{color:#cbd5e0}.text-gray-500{color:#a0aec0}.text-gray-600{color:#718096}.text-gray-700{color:#4a5568}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.w-1{width:.25rem}.w-4{width:1rem}.w-6{width:1.5rem}.w-32{width:8rem}.w-40{width:10rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}.lg\\:overflow-y-auto{overflow-y:auto}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
 	`;
+	
 	let head = document.getElementsByTagName('head')[0];
 	style = document.createElement('style');
 	style.type = 'text/css';
@@ -322,6 +429,7 @@ const main = async () => {
 	body.classList.add('bg-gray-900');
 	// To make sure PurgeCSS generates html classes
 	// <html></html>
+	/*html*/
 	body.innerHTML = `
 	<div id="app" class="font-sans text-gray-100">
 		<div id="layout">
@@ -471,6 +579,16 @@ const main = async () => {
 								<span class="ml-2" title="Load opening book files from 'books' folder">Use opening books</span>
 							</label>
 						</div>
+
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="drawOverlay"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Draw best move and response over the actual board">Draw overlay</span>
+							</label>
+						</div>
 					</div>
 				</div>
 				<div>
@@ -593,7 +711,8 @@ const main = async () => {
 			book3: '',
 			book4: '',
 			logEngine: '',
-			useBook: '',
+			useBook: true,
+			drawOverlay: true,
 			pvs: [],
 			selectedPV: 1,
 			running: true,
@@ -626,6 +745,7 @@ const main = async () => {
 			onSelectPV(pv) {
 				console.log('Changing PV to', pv);
 				this.selectedPV = pv;
+				drawOnScreen();
 				ws.send(JSON.stringify({ type: 'draw_svg', data: pv }));
 			},
 		},
@@ -634,9 +754,10 @@ const main = async () => {
 	try {
 		ws = await connect(`ws://127.0.0.1:5678/${uid}`);
 	} catch {
-		console.log('Failed to connect. Make sure the server is running and refresh the page.');
+		console.error('Failed to connect. Make sure the server is running and refresh the page.');
 		return;
 	}
+
 	console.log('Connection estabished.');
 	ws.onmessage = function(event) {
 		data = JSON.parse(event.data);
@@ -653,9 +774,7 @@ const main = async () => {
 					app.$data[key] = value;
 				} else {
 					console.error(`No key: ${key} found in app data!`);
-					console.log(`Error: No key: ${key} found in app data!`);
 				}
-
 				break;
 			case 'engine_settings':
 				app.engineSettings = data.message;
@@ -664,17 +783,25 @@ const main = async () => {
 			case 'multipv':
 				app.pvs = data.message;
 				app.selectedPV = 1;
+				drawOnScreen();
 				break;
 			default:
-				console.log('Received unknown message type, see console for details');
+				console.warn('Received unknown message type:');
 				console.log(data);
 		}
 	};
 
 	doc.addEventListener('visibilitychange', () => {
 		ws.send(JSON.stringify({ type: 'visibility', data: !doc.hidden }));
-		console.log(`Game ${doc.hidden ? 'hidden' : 'visible'}`);
+		console.log(`Game ${doc.hidden ? 'Page is hidden' : 'Page is visible'}`);
 	});
+
+	window.opener.addEventListener('resize', drawOnScreen);
+	var boardElement = siteMap[host].boardTarget;
+	if (boardElement) {
+		doc.querySelector(siteMap[host].boardTarget).addEventListener("resize", drawOnScreen);
+	}
+
 	doc.addEventListener('keydown', hotkey);
 	await findGame();
 };

@@ -165,7 +165,9 @@ async def run_engine(uid, ws):
                 list_index += 1
                 score = move.weight
                 pv = []
+                lan = []
                 pv.append(game.board.san(move.move))
+                lan.append(game.board.lan(move.move))
                 arrow = drawing.get_arrow(move.move, game.board.turn, 0)
                 game.arrows[list_index].append(arrow)
                 game.board.push(move.move)
@@ -173,6 +175,7 @@ async def run_engine(uid, ws):
                 opponents_turn = game.board.turn
                 for reply in replies:
                     pv.append(game.board.san(reply.move))
+                    lan.append(game.board.lan(reply.move))
                     arrow = drawing.get_arrow(reply.move, opponents_turn, 1)
                     game.arrows[list_index].append(arrow)
                 # Unwind the move stack
@@ -182,7 +185,9 @@ async def run_engine(uid, ws):
                     'multipv': list_index,
                     'score': score,
                     'pv': pv,
-                    'eco': eco.get_name(epd)
+                    'lan': lan,
+                    'eco': eco.get_name(epd),
+                    'turn': game.board.turn
                 }
 
                 multi_pv.append(line)
@@ -202,12 +207,15 @@ async def run_engine(uid, ws):
             for multi_pv in results:
                 move_counter = 0
                 pv = []
+                lan_pv = []
                 epd_board = None
                 for index, move in enumerate(multi_pv.pv):
                     san = game.board.san(move)
+                    lan = game.board.lan(move)
                     arrow = drawing.get_arrow(move, game.board.turn, move_counter // 2)
                     game.arrows[multi_pv.multipv].append(arrow)
                     pv.append(san)
+                    lan_pv.append(lan)
                     game.board.push(move)
                     if index == 0:
                         epd_board = game.board.copy()
@@ -223,8 +231,10 @@ async def run_engine(uid, ws):
                 unit = {
                     'multipv': multi_pv.multipv,
                     'pv': pv,
+                    'lan': lan_pv,
                     'score': score,
-                    'eco': eco.get_name(epd)
+                    'eco': eco.get_name(epd),
+                    'turn': game.board.turn
                 }
                 multipv_data.append(unit)
             await ws.send(serialize_message("multipv", multipv_data))
