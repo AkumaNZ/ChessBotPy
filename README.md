@@ -159,7 +159,8 @@ The left panel includes program settings and engine settings.
 
 **Limit:** Depth is how far the engine will try to search, values above 20 will start to take very long, so be careful. Time will limit how long the engine is allowed to run for.
 
-**Principal variations:** How many different lines the engine will show (Not used if a move is found in an opening book)
+**Principal variations:** How many different lines the engine will show (Not used if a move is found in an opening book).
+Principal variations are shown below the board. If the position is known, it's ECO name is shown. Next to the variation number, the estimated strength of the position is shown. This number is included in the opening book, and can very between books, and may not be an accurate. Normally the variations are sorted by the strength of the line.
 
 **Engine path:** The same engine path that was set in settings.ini, can also be modified directly here.
 
