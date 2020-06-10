@@ -87,3 +87,4 @@ def get_mapped_settings():
     yield {'key': 'time', 'value': config.getfloat('gui', 'time')}
     yield {'key': 'logEngine', 'value': config.getboolean('gui', 'clear_log')}
     yield {'key': 'useBook', 'value': config.getboolean('gui', 'use_book')}
+    yield {'key': 'drawOverlay', 'value': config.getboolean('gui', 'draw_overlay')}

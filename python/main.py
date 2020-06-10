@@ -262,11 +262,11 @@ async def update_board(game, data, uid, ws, fen):
         game.board.set_fen(data)
     else:
         for move in data:
-            # if not game.board.is_game_over():
-            try:
-                game.board.push_san(move)
-            except ValueError as err:
-                print(err)
+            if not game.board.is_game_over():
+                try:
+                    game.board.push_san(move)
+                except ValueError as err:
+                    print(err)
 
     if game.visible:
         await run_engine(uid, ws)
