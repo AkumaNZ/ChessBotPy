@@ -5,7 +5,7 @@
 // @match       *://www.chess.com/*
 // @match       *://chess24.com/*
 // @grant       none
-// @require     https://cdn.jsdelivr.net/npm/vue/dist/vue.js
+// @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
 // @version     4.1
 // @author      FallDownTheSystem
 // @description ChessBotPy Client

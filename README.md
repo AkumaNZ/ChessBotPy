@@ -9,7 +9,8 @@ The basic operation of this bot is very simple:
 4. The data from engine is outputted to the user and sent back to the client (a second browser tab opened by the userscript)
 
 Web client GUI:
-https://i.imgur.com/heHy6Wy.png
+https://i.imgur.com/heHy6Wy.png  
+https://i.imgur.com/g1cyCDR.png
 
 ## Caveats:
 
