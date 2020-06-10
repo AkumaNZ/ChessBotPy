@@ -121,7 +121,7 @@ function generateGridAreas() {
 	return gridArea;
 }
 
-function parseLAN(LAN) {
+function parseLAN(LAN, turn) {
 	let moves = LAN.split('-');
 	if (moves.length == 1) {
 		moves = LAN.split('x');
@@ -131,7 +131,7 @@ function parseLAN(LAN) {
 
 	// Long castles (O-O-O)
 	if (moves.length == 3) {
-		if (app.playingAs == WHITE) {
+		if (turn == WHITE) {
 			return { from: 'e1', to: 'c1' };
 		}
 		return { from: 'e8', to: 'c8' };
@@ -139,7 +139,7 @@ function parseLAN(LAN) {
 
 	// Short castles
 	if (from.toLowerCase() == "o") {
-		if (app.playingAs == WHITE) {
+		if (turn == WHITE) {
 			return { from: 'e1', to: 'g1' };
 		}
 		return { from: 'e8', to: 'g8' };
@@ -158,14 +158,14 @@ function createBox(square, color, width, height) {
 	return box;
 }
 
-function drawBox(overlay, move, color, width, height) {
+function drawBox(overlay, move, turn, width, height) {
 	colors = {
 		0: ['hsla(350, 100%, 50%, 0.66)', 'hsla(340, 100%, 50%, 0.66)'], // BLACK
 		1: ['hsla(145, 100%, 50%, 0.66)', 'hsla(155, 100%, 50%, 0.66)'], // WHITE
 	};
-	var {from, to} = parseLAN(move);
-	overlay.appendChild(createBox(from, colors[color][0], width, height));
-	overlay.appendChild(createBox(to, colors[color][1], width, height));
+	var {from, to} = parseLAN(move, turn);
+	overlay.appendChild(createBox(from, colors[turn][0], width, height));
+	overlay.appendChild(createBox(to, colors[turn][1], width, height));
 }
 
 function drawOnScreen() {
@@ -195,18 +195,18 @@ function drawOnScreen() {
 	overlay.style.width = width + "px";
 	overlay.style.gridTemplateAreas = generateGridAreas();
 
-	var turn = app.pvs[0] ? app.pvs[0].turn : 0;
+	var turn = app.pvs[0] ? +app.pvs[0].turn : 0;
 	var lanMoves = app.pvs.map(x => x.lan);
 	var lanPV = lanMoves[app.selectedPV - 1];
 
 	// If Im playing as black, and it's my turn, then draw as black
 
 	if (lanPV && lanPV.length > 0) {
-		drawBox(overlay, lanPV[0], +turn, width, height)
+		drawBox(overlay, lanPV[0], turn, width, height)
 	}
 
 	if (lanPV && lanPV.length > 1) {
-		drawBox(overlay, lanPV[1], (+turn + 1) % 2, width, height)
+		drawBox(overlay, lanPV[1], (turn + 1) % 2, width, height)
 	}
 
 	doc.body.appendChild(overlay);
