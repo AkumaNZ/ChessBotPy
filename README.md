@@ -221,3 +221,6 @@ The engine will not run when the main window is not visible, that means you've i
 
 **Can I see what the code is doing?**  
 There's logging in the server side (python code), as well as client side in the GUI tab's browser console. You can open dev tools in the browser by pressing F12, and see everything that's being logged. This can be useful for troubleshooting any possible problems.
+
+**The overlay is not drawing on the correct squares**
+Check the side, sometimes the side (black or white) finder can fail and thinks you're the playing the wrong color, causing the overlay to be rotated. Just set the side manually to fix it. `ALT + Q` for black and `ALT + W` for white (make sure the tab with the actual game is active).
