@@ -26,6 +26,7 @@ except Exception as err:
 # Global state
 games = {}
 task = None
+
 # Constants
 # Side
 BLACK = 0
@@ -49,12 +50,15 @@ class GameObject():
         self.arrows = defaultdict(list)
 
     def should_run(self):
+        run_for = settings.config.getint('gui', 'run')
+        side = self.side
+        turn = self.board.turn
+
         if not self.running:
             return False
         if self.board.is_game_over():
             return False
-        if settings.config.getint(
-                'gui', 'run') != BOTH and self.board.turn != self.side:
+        if (run_for == ME and side != turn) or (run_for == OPPONENT and side == turn):
             return False
         return True
 
@@ -104,180 +108,182 @@ async def run_engine(uid, ws):
                 serialize_message('error', 'Engine path: ' + err.strerror))
         await configure_engine(game.engine)
 
-    if game.should_run():
-        # Reset old arrows when engine is about to run
-        game.arrows.clear()
-        # print(game.board)
-        limit: chess.engine.Limit = chess.engine.Limit()
-        use_depth = settings.config.getboolean('gui', 'use_depth')
-        use_time = settings.config.getboolean('gui', 'use_time')
-        if use_depth:
-            limit.depth = settings.config.getint('gui', 'depth')
-        if use_time:
-            limit.time = settings.config.getfloat('gui', 'time')
+    if not game.should_run():
+        return
 
-        if not use_depth and not use_time:
-            limit.depth = 8
-            await ws.send(
-                serialize_message('error',
-                                  'No limit set, using default depth of 8'))
+    # Reset old arrows when engine is about to run
+    game.arrows.clear()
+    # print(game.board)
+    limit: chess.engine.Limit = chess.engine.Limit()
+    use_depth = settings.config.getboolean('gui', 'use_depth')
+    use_time = settings.config.getboolean('gui', 'use_time')
+    if use_depth:
+        limit.depth = settings.config.getint('gui', 'depth')
+    if use_time:
+        limit.time = settings.config.getfloat('gui', 'time')
 
-        if settings.config.getboolean('gui', 'clear_log'):
-            try:
-                open(settings.engine_config.get('engine', 'debug log file'),
-                     'w').close()
-            except Exception:
-                pass
-        # Look for opening moves from books
-        opening_moves = []
-        if settings.config.getboolean('gui', 'use_book'):
-            bookfiles = books.load_books('books')
-            for bookfile in bookfiles:
-                read_book(bookfile, opening_moves, game, [], 0)
+    if not use_depth and not use_time:
+        limit.depth = 8
+        await ws.send(
+            serialize_message('error',
+                              'No limit set, using default depth of 8'))
 
-        if len(opening_moves) > 0:
-            opening_moves = sorted(opening_moves,
-                                   key=lambda x: sum([y.weight for y in x]),
-                                   reverse=True)
-            best_move = game.board.san(opening_moves[0][0].move)
-            opening_dict = defaultdict(list)
+    if settings.config.getboolean('gui', 'clear_log'):
+        try:
+            open(settings.engine_config.get('engine', 'debug log file'),
+                 'w').close()
+        except Exception:
+            pass
+    # Look for opening moves from books
+    opening_moves = []
+    if settings.config.getboolean('gui', 'use_book'):
+        bookfiles = books.load_books('books')
+        for bookfile in bookfiles:
+            read_book(bookfile, opening_moves, game, [], 0)
 
-            for move, *reply in opening_moves:
-                reply = reply[0] if len(reply) > 0 else None
-                raw_keys = [x.raw_move for x in opening_dict]
-                raw_key = move.raw_move
+    if len(opening_moves) > 0:
+        opening_moves = sorted(opening_moves,
+                               key=lambda x: sum([y.weight for y in x]),
+                               reverse=True)
+        best_move = game.board.san(opening_moves[0][0].move)
+        opening_dict = defaultdict(list)
 
-                # If the raw has already been added
-                if (raw_key in raw_keys):
-                    # No need to do anything if there is no reply anyway
-                    if reply:
-                        # Find the raw move and append reply to there instead
-                        existing_key = None
-                        for key in opening_dict:
-                            if key.raw_move == raw_key:
-                                existing_key = key
-                        if (existing_key):
-                            # Check if the list contains raw_move of the reply already
-                            raw_moves = [
-                                x.raw_move for x in opening_dict[existing_key]
-                            ]
-                            raw_move = reply.raw_move
-                            if (raw_move not in raw_moves):
-                                opening_dict[key].append(reply)
+        for move, *reply in opening_moves:
+            reply = reply[0] if len(reply) > 0 else None
+            raw_keys = [x.raw_move for x in opening_dict]
+            raw_key = move.raw_move
+
+            # If the raw has already been added
+            if (raw_key in raw_keys):
+                # No need to do anything if there is no reply anyway
+                if reply:
+                    # Find the raw move and append reply to there instead
+                    existing_key = None
+                    for key in opening_dict:
+                        if key.raw_move == raw_key:
+                            existing_key = key
+                    if (existing_key):
+                        # Check if the list contains raw_move of the reply already
+                        raw_moves = [
+                            x.raw_move for x in opening_dict[existing_key]
+                        ]
+                        raw_move = reply.raw_move
+                        if (raw_move not in raw_moves):
+                            opening_dict[key].append(reply)
+            else:
+                if reply:
+                    opening_dict[move].append(reply)
                 else:
-                    if reply:
-                        opening_dict[move].append(reply)
-                    else:
-                        opening_dict[move] = []
+                    opening_dict[move] = []
 
-            multi_pv = []
-            list_index = 0
-            for move, replies in opening_dict.items():
-                list_index += 1
-                score = move.weight
-                pv = []
-                lan = []
-                pv.append(game.board.san(move.move))
-                lan.append(game.board.lan(move.move))
-                arrow = drawing.get_arrow(move.move, game.board.turn, 0)
+        multi_pv = []
+        list_index = 0
+        for move, replies in opening_dict.items():
+            list_index += 1
+            score = move.weight
+            pv = []
+            lan = []
+            pv.append(game.board.san(move.move))
+            lan.append(game.board.lan(move.move))
+            arrow = drawing.get_arrow(move.move, game.board.turn, 0)
+            game.arrows[list_index].append(arrow)
+            game.board.push(move.move)
+            epd_board = game.board.copy()
+            opponents_turn = game.board.turn
+            for reply in replies:
+                pv.append(game.board.san(reply.move))
+                lan.append(game.board.lan(reply.move))
+                arrow = drawing.get_arrow(reply.move, opponents_turn, 1)
                 game.arrows[list_index].append(arrow)
-                game.board.push(move.move)
-                epd_board = game.board.copy()
-                opponents_turn = game.board.turn
-                for reply in replies:
-                    pv.append(game.board.san(reply.move))
-                    lan.append(game.board.lan(reply.move))
-                    arrow = drawing.get_arrow(reply.move, opponents_turn, 1)
-                    game.arrows[list_index].append(arrow)
-                # Unwind the move stack
+            # Unwind the move stack
+            game.board.pop()
+            epd = epd_board.epd()
+            line = {
+                'multipv': list_index,
+                'score': score,
+                'pv': pv,
+                'lan': lan,
+                'eco': eco.get_name(epd),
+                'turn': game.board.turn
+            }
+
+            multi_pv.append(line)
+        await ws.send(serialize_message('multipv', multi_pv))
+    else:
+        # If there no opening moves were found, use engine to analyse instead
+        if game.engine is None:
+            print(
+                "Trying to analyse but engine has not been initialized, check engine path.")
+            await ws.send(serialize_message('error', "Trying to analyse but engine has not been initialized, check engine path."))
+            return
+
+        multi_pv = settings.config.getint('gui', 'multipv')
+        print("Starting analysis with limit", limit, "for", multi_pv,
+              "pv(s)")
+        try:
+            results = await game.engine.analyse(
+                board=game.board,
+                limit=limit,
+                multipv=multi_pv,
+                game=uid,
+                info=chess.engine.INFO_ALL,
+            )
+        except Exception as err:
+            print('Engine analysis failed.')
+            print(err)
+            return
+
+        best_move = game.board.san(results[0].pv[0])
+        multipv_data = []
+        for multi_pv in results:
+            move_counter = 0
+            pv = []
+            lan_pv = []
+            epd_board = None
+
+            for index, move in enumerate(multi_pv.pv):
+                san = game.board.san(move)
+                lan = game.board.lan(move)
+                arrow = drawing.get_arrow(move, game.board.turn,
+                                          move_counter // 2)
+                pv_index = 1 if multi_pv.multipv == None else multi_pv.multipv
+                game.arrows[pv_index].append(arrow)
+
+                pv.append(san)
+                lan_pv.append(lan)
+                game.board.push(move)
+
+                if index == 0:
+                    epd_board = game.board.copy()
+                move_counter += 1
+
+            for i in range(move_counter):
                 game.board.pop()
-                epd = epd_board.epd()
-                line = {
-                    'multipv': list_index,
-                    'score': score,
-                    'pv': pv,
-                    'lan': lan,
-                    'eco': eco.get_name(epd),
-                    'turn': game.board.turn
-                }
 
-                multi_pv.append(line)
-            await ws.send(serialize_message('multipv', multi_pv))
-        else:
-            # If there no opening moves were found, use engine to analyse instead
-            if game.engine is None:
-                print(
-                    "Trying to analyse but engine has not been initialized, check engine path.")
-                await ws.send(serialize_message('error', "Trying to analyse but engine has not been initialized, check engine path."))
-                return
+            if multi_pv.score.is_mate():
+                score = '#' + str(multi_pv.score.relative.moves)
+            else:
+                score = multi_pv.score.relative.cp
 
-            multi_pv = settings.config.getint('gui', 'multipv')
-            print("Starting analysis with limit", limit, "for", multi_pv,
-                  "pv(s)")
-            try:
-                results = await game.engine.analyse(
-                    board=game.board,
-                    limit=limit,
-                    multipv=multi_pv,
-                    game=uid,
-                    info=chess.engine.INFO_ALL,
-                )
-            except Exception as err:
-                print('Engine analysis failed.')
-                print(err)
-                return
+            unit = {
+                'multipv': multi_pv.multipv,
+                'pv': pv,
+                'lan': lan_pv,
+                'score': score,
+                'eco': eco.get_name(epd_board.epd()),
+                'turn': game.board.turn
+            }
+            multipv_data.append(unit)
+        await ws.send(serialize_message("multipv", multipv_data))
+    print('Best move:', best_move)
 
-            best_move = game.board.san(results[0].pv[0])
-            multipv_data = []
-            for multi_pv in results:
-                move_counter = 0
-                pv = []
-                lan_pv = []
-                epd_board = None
+    if settings.config.getboolean('gui', 'draw_board'):
+        svg = drawing.draw_svg_board(game, 1)
+        await ws.send(serialize_message('board', svg))
 
-                for index, move in enumerate(multi_pv.pv):
-                    san = game.board.san(move)
-                    lan = game.board.lan(move)
-                    arrow = drawing.get_arrow(move, game.board.turn,
-                                              move_counter // 2)
-                    pv_index = 1 if multi_pv.multipv == None else multi_pv.multipv
-                    game.arrows[pv_index].append(arrow)
-
-                    pv.append(san)
-                    lan_pv.append(lan)
-                    game.board.push(move)
-
-                    if index == 0:
-                        epd_board = game.board.copy()
-                    move_counter += 1
-
-                for i in range(move_counter):
-                    game.board.pop()
-
-                if multi_pv.score.is_mate():
-                    score = '#' + str(multi_pv.score.relative.moves)
-                else:
-                    score = multi_pv.score.relative.cp
-
-                unit = {
-                    'multipv': multi_pv.multipv,
-                    'pv': pv,
-                    'lan': lan_pv,
-                    'score': score,
-                    'eco': eco.get_name(epd_board.epd()),
-                    'turn': game.board.turn
-                }
-                multipv_data.append(unit)
-            await ws.send(serialize_message("multipv", multipv_data))
-        print('Best move:', best_move)
-
-        if settings.config.getboolean('gui', 'draw_board'):
-            svg = drawing.draw_svg_board(game, 1)
-            await ws.send(serialize_message('board', svg))
-
-        if settings.config.getboolean('gui', 'use_voice'):
-            voice.say(best_move)
-        game.missed_moves = False
+    if settings.config.getboolean('gui', 'use_voice'):
+        voice.say(best_move)
+    game.missed_moves = False
 
 
 async def update_board(game, data, uid, ws, fen):

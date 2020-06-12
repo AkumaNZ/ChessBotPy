@@ -71,17 +71,20 @@ async def update_settings(data, game, ws, uid):
     # Update game object if the key exists and the value is not the same as before
     if hasattr(game, key):
         setattr(game, key, value)
+        # Running status and side are not saved in the settings.ini, so we can return early
         if key == 'running':
             return value
+        elif key == 'side':
+            return True
 
     if config.has_option('gui', key):
         # Set gui settings and save to file
         config['gui'][key] = str(value)
-
         with open('settings.ini', 'w') as config_file:
             config.write(config_file)
         return True
-    print("Setting not found.")
+
+    print("Setting not found", data)
     return False
 
 
