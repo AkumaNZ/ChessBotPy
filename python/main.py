@@ -25,7 +25,7 @@ except Exception as err:
 
 # Global state
 games = {}
-
+task = None
 # Constants
 # Side
 BLACK = 0
@@ -381,6 +381,7 @@ async def cleanup(uid):
 
 
 async def connection_handler(websocket, path):
+    global task
     try:
         print('Client connected', path)
         # Send default settings values to client
@@ -399,7 +400,15 @@ async def connection_handler(websocket, path):
 
         async for message in websocket:
             try:
-                asyncio.create_task(handle_message(message, path, websocket))
+                if task is not None and not task.done():
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        print("Handle message is now cancelled.")
+
+                task = asyncio.create_task(
+                    handle_message(message, path, websocket))
             except Exception as err:
                 print(err)
                 print("Something went wrong. Keep trying...")
