@@ -65,6 +65,7 @@ async def update_settings(data, game, ws, uid):
     print("Updating settings", data)
     if not os.path.exists('settings.ini'):
         initialize_settings_file()
+
     key = data['key']
     value = data['value']
     # Update game object if the key exists and the value is not the same as before
@@ -80,6 +81,7 @@ async def update_settings(data, game, ws, uid):
         with open('settings.ini', 'w') as config_file:
             config.write(config_file)
         return True
+    print("Setting not found.")
     return False
 
 

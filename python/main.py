@@ -234,6 +234,7 @@ async def run_engine(uid, ws):
                 pv = []
                 lan_pv = []
                 epd_board = None
+
                 for index, move in enumerate(multi_pv.pv):
                     san = game.board.san(move)
                     lan = game.board.lan(move)
@@ -241,26 +242,29 @@ async def run_engine(uid, ws):
                                               move_counter // 2)
                     pv_index = 1 if multi_pv.multipv == None else multi_pv.multipv
                     game.arrows[pv_index].append(arrow)
+
                     pv.append(san)
                     lan_pv.append(lan)
                     game.board.push(move)
+
                     if index == 0:
                         epd_board = game.board.copy()
                     move_counter += 1
+
                 for i in range(move_counter):
                     game.board.pop()
+
                 if multi_pv.score.is_mate():
                     score = '#' + str(multi_pv.score.relative.moves)
                 else:
                     score = multi_pv.score.relative.cp
 
-                epd = epd_board.epd()
                 unit = {
                     'multipv': multi_pv.multipv,
                     'pv': pv,
                     'lan': lan_pv,
                     'score': score,
-                    'eco': eco.get_name(epd),
+                    'eco': eco.get_name(epd_board.epd()),
                     'turn': game.board.turn
                 }
                 multipv_data.append(unit)
@@ -309,8 +313,11 @@ async def handle_message(message, uid, ws):
     # Handle setting changes before engine is initialized
     if data['type'] == 'setting':
         rerun_engine = await settings.update_settings(data['data'], game, ws, uid)
+        if not rerun_engine:
+            await close_engine(game)
+
         if data['data']['key'] == 'engine_path':
-            # Re-initialize engine settings file, if engine path was changed.
+            # Re-initialize engine settings file, and send engine settings to client if engine path was changed.
             await close_engine(game)
             try:
                 engine_path = settings.config.get('gui', 'engine_path')
@@ -325,11 +332,14 @@ async def handle_message(message, uid, ws):
             except Exception as err:
                 print('Initializing engine failed.')
                 print(err)
+
         if rerun_engine:
             await run_engine(uid, ws)
+
     elif data['type'] == 'engine_setting':
         await settings.update_engine_settings(data['data'])
         await run_engine(uid, ws)
+
     elif data['type'] == 'visibility':
         game.visible = data['data']
         print(f'Game {uid} {"visible" if game.visible else "hidden"}')
@@ -339,22 +349,26 @@ async def handle_message(message, uid, ws):
         # Run engine if there were any missed moves while game was not visible
         if game.visible and game.missed_moves:
             await run_engine(uid, ws)
+
     elif data['type'] == 'moves':
         await update_board(game, data['data'], uid, ws, False)
+
     elif data['type'] == 'fen':
         await update_board(game, data['data'], uid, ws, True)
+
     elif data['type'] == 'clear_hash':
         if game.engine is not None:
             print("Clearing hash...")
             await game.engine.configure({"Clear Hash": True})
+
     elif data['type'] == 'draw_svg':
         print("Drawing board for PV", data['data'])
         svg = drawing.draw_svg_board(game, data['data'])
         await ws.send(serialize_message('board', svg))
-    elif data['type'] == 'setting' or data['type'] == 'engine_setting':
-        pass  # Settings are handled earlier
+
     elif 'type' in data:
         print('Unknown type', data['type'])
+
     else:
         print('Unknown message', data)
 
@@ -371,6 +385,7 @@ async def connection_handler(websocket, path):
         print('Client connected', path)
         # Send default settings values to client
         await settings.send_settings(websocket)
+
         # Send engine settings to client
         engine_path = settings.config.get('gui', 'engine_path')
         if os.path.exists(engine_path):
@@ -384,13 +399,13 @@ async def connection_handler(websocket, path):
 
         async for message in websocket:
             try:
-                await handle_message(message, path, websocket)
+                asyncio.create_task(handle_message(message, path, websocket))
             except Exception as err:
                 print(err)
                 print("Something went wrong. Keep trying...")
 
         print('Connection closed', path)
-        # Clean up
+
         await cleanup(path)
     except websockets.ConnectionClosed as err:
         print(err)

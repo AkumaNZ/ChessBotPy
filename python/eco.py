@@ -4,6 +4,7 @@ from os.path import isfile, join
 
 openings = {}
 
+
 def load_eco(path):
     onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
     for f in onlyfiles:
@@ -13,6 +14,7 @@ def load_eco(path):
             for line in handle.readlines():
                 elements = line.split('\t')
                 openings[elements[2]] = elements[1]
+
 
 def get_name(epd):
     name = openings.get(epd)

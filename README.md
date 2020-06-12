@@ -41,8 +41,6 @@ Next you'll need to run the python script. You can either run the precompiled ex
 
 The included engine is a dev build of Stockfish (bmi2) from 6.6.2020, if this does not work for you, keep reading.
 
-There's also additional information below about engines, settings, opening books, end game tables, etc.
-
 ### Running the python script yourself:
 
 Everything here was tested with Python 3.8.3, I can't guarantee that any other versions will work.
@@ -68,15 +66,16 @@ Now install the requirements with `python -m pip install -r requirements.txt` (T
 Now you need to download an engine. I recommend downloading the latest version of Stockfish from:  
 https://blog.abrok.eu/stockfish-dev-builds-faq/
 
+You can also look into Lc0: https://blog.lczero.org/play/quickstart/
+
 Make sure to get a version that works with your machine. You can also use other UCI based engines.
 
 Install the engine to a folder called `engine` and name the file `stockfish.exe` in the project root directory
 
 Now you can run the python script with `python python\main.py`
 
-**If your engine is not in a folder called engine in the root directory or the name is not `stockfish.exe`, you need to setup the path in the settings.ini file**
-
-Later the engine path can also be set in the web client GUI, once you can get the program running.
+**If your engine is not in a folder called engine in the root directory or the name is not `stockfish.exe`,**  
+**you need to setup the path in the settings.ini file or modify it in the GUI after running the program and starting a game**
 
 **Linux:**
 
@@ -107,6 +106,8 @@ Now install the requirements with `python3 -m pip install -r requirements.txt` (
 Now you need to download an engine. I recommend downloading the latest version of Stockfish from:  
 https://blog.abrok.eu/stockfish-dev-builds-faq/
 
+You can also look into Lc0: https://blog.lczero.org/play/quickstart/
+
 For example:
 
 `mkdir engine`
@@ -117,12 +118,9 @@ For example:
 
 Make sure to get a version that works with your machine. You can also use other UCI based engines.
 
-Next you need to set the correct engine_path in the settings.ini file.
+Next you need to set the correct engine_path, either in the settings.ini file or you can launch the program and change it in the GUI after starting a game.
 
 Edit the settings.ini and set the engine_path to `./engine/stockfish`
-
-Later the engine path can also be set in the web client GUI, once you can get the program running.
-
 
 ### **Opening books**
 
@@ -151,7 +149,7 @@ Note that these are not used directly with this program, but rather with the eng
 
 The left panel includes program settings and engine settings.
 
-**Status:** Whether or not the engine will run (While in the browser window with the game, hotkeys `ALT + A` will run the engine and `ALT + S` will stop it).
+**Status:** Whether or not the engine will run (While in the browser window with the game, hotkeys `ALT + A` will run the engine and `ALT + S` will stop it). Setting the status to `stopped` will shut down the engine, allowing you to reload the engine, if you made modifications to engine settings.
 
 **Playing as:** Indicates which side you're playing as. The userscript will detect this in the first few moves, but you can change it yourself as well (Hotkeys `ALT + W` to play as white and `ALT + Q` to play as black).
 
@@ -160,7 +158,8 @@ The left panel includes program settings and engine settings.
 **Limit:** Depth is how far the engine will try to search, values above 20 will start to take very long, so be careful. Time will limit how long the engine is allowed to run for.
 
 **Principal variations:** How many different lines the engine will show (Not used if a move is found in an opening book).
-Principal variations are shown below the board. If the position is known, it's ECO name is shown. Next to the variation number, the estimated strength of the position is shown. This number is included in the opening book, and can very between books, and may not be an accurate. Normally the variations are sorted by the strength of the line.
+
+Principal variations are shown below the board. If the position is known, it's ECO name is shown. Next to the variation # number, the estimated strength of the position is shown in centipawns (1/100th of a pawn value). The strength value shown depends on engine/engine settings. Also when the positions come from an opening book, the value comes directly from the book, and different books can show completely different values or ranges of values, so the value may not be accurate, if you're using multiple books.
 
 **Engine path:** The same engine path that was set in settings.ini, can also be modified directly here.
 
@@ -174,25 +173,14 @@ Principal variations are shown below the board. If the position is known, it's E
 
 **Draw overlay:** Draws the best move and expected response over the actual board.
 
-
+**Log**: Everything is logged to the browsers console, so open dev tools (F12) to see any logged messages.
 
 ### **Engine settings**
 
-These settings are automatically generated by the engine (the default value is shown next to the set value). These will vary depending on the engine you use, but for Stockfish some of the important settings include:
-
-**Threads:** The number of CPU cores you want the engine to use.
-
-**Hash:** The amount of RAM you want the engine to use (1000 is 1GB).
-
-**SKILL LEVEL:** How well the engine will play, 20 is highest skill.
-
-**UCI_LIMITSTRENGTH:** Alternative way to limit skill, this is much better than **SKILL LEVEL**, so if you want to limit the strength, use this instead. If this is enabled the **UCI_ELO** setting is used to limit the strength of the engine.
-
-**SYZYGYPATH:** Path to directory or directories (seperated by `;`) of syzygy end game table files
-
-**SYZYGYPROBELIMIT:** Limit Syzygy tablebase probing to positions with at most this many pieces left (including kings and pawns).
+These settings are automatically generated by the engine (the default value is shown next to the set value). These will vary depending on the engine you use.
 
 You can read more about Stockfish UCI settings at: https://github.com/official-stockfish/Stockfish
+And Leela Chess Zero settings at: https://blog.lczero.org/play/configuration/flags/
 
 ## Build and development
 
@@ -209,6 +197,27 @@ To use development version of tailwind
 and switch out the css in the head tag with the version loaded from localhost
 
 
-## Can I get banned using this?
 
+## Troubleshooting / FAQ
+
+**The engine is stuck**  
+If the engine is stuck because of invalid engine settings or for some other reason, you can modify the settings you need to, then stop the backend
+(Set status to paused) and start it again, the engine should restart and reload the new settings.
+
+**Engine analysis is taking forever**  
+If the analysis it taking too long e.g. depth was set high and no time limit, you can stop the engine (set status to paused), modify the limits to more reasonable values and start the engine again (set status to running).
+
+**Can I get banned using this?**  
 Yes. It's possible but unlikely for the sites to detect someone using the userscript. You can also get banned if you play too well all the time.
+Sites usually check your moves against top engine recommended moves, if your accuracy is too high you'll be flagged as a cheater. They also look at how fast you make moves. If you always move at the same speed, even when the moves should be easy and fast or hard and long, you can be flagged as a cheater.
+
+Try to play like a human would, and only use the best move recommendation if you need the help. You can toggle the engine on and off quickly with `ALT + A` (start) and `ALT+S` (stop).
+
+**How do the limits work?**  
+When a limit is hit, the engine will stop, so either it reaches the depth or it reaches the time limit. It's a good idea to have some max time you want, and you can adjust the skill level by adjusting the depth.
+
+**The engine is not running when I'm not watching the game**  
+The engine will not run when the main window is not visible, that means you've in a different tab in your browser or the window is minimized. This is because the program can handle multiple games at the same time, so the engine will be stopped for games, which are not active.
+
+**Can I see what the code is doing?**  
+There's logging in the server side (python code), as well as client side in the GUI tab's browser console. You can open dev tools in the browser by pressing F12, and see everything that's being logged. This can be useful for troubleshooting any possible problems.
