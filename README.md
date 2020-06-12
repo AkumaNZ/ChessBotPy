@@ -16,9 +16,9 @@ https://i.imgur.com/g1cyCDR.png
 
 To be able connect to a websocket, a site must not have restricted content security policy (CSP), specifically connect-src. Fortunately this can be bypassed by opening a new window, which does not have CSP, and communicating through `window` objects in javascript.
 
-Lichess also has a response header 'cross-origin-opener-policy' on some of their pages (Analysis board for example), which blocks the opened window from working due to CORS. This can be bypassed by removing the header with a browser extension (Requestly for chrome for example).
+Lichess also has a response header `cross-origin-opener-policy` on some of their pages (Analysis board for example), which blocks the opened window from working due to CORS. This can be bypassed by removing the header with a browser extension (e.g. `Simple Modify Headers` for Chrome or Firefox).
 
-https://i.imgur.com/eLiwyfU.png
+https://i.imgur.com/SMeDAPq.png  
 
 
 ## Getting started
