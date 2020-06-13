@@ -4,6 +4,7 @@
 // @match       *://lichess.org/*
 // @match       *://www.chess.com/*
 // @match       *://chess24.com/*
+// @match       *://gameknot.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
 // @version     6.0
@@ -12,7 +13,7 @@
 // ==/UserScript==
 
 // Global state
-let numOfMoves = 0;
+let numOfMoves = -1;
 let fen = '';
 let uid = uuidv4();
 let ws = null;
@@ -49,7 +50,6 @@ let siteMap = {
 		sideFinder: () =>
 			doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE,
 	},
-
 	'chess24.com': {
 		observerTarget: '.Moves',
 		sanTarget: '.move',
@@ -171,6 +171,7 @@ function createBox(square, color, width, height) {
 	box.style.border = `4px solid ${color}`;
 	box.style.pointerEvents = 'none';
 	box.style.gridArea = square;
+	box.style.boxSizing = 'border-box';
 	return box;
 }
 
@@ -330,6 +331,7 @@ const main = async () => {
 	window.document.title = `Client: ${window.opener.location.pathname}`;
 
 	// await loadCSS('http://127.0.0.1:8080/dist/tailwind.css');
+	window.document.head.innerHTML = '';
 	await loadCSS('https://fonts.googleapis.com/css?family=Nunito:400,700|Open+Sans:400,700&display=swap');
 
 	const styleString = /*css*/ `
