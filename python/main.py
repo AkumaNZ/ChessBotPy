@@ -13,29 +13,23 @@ import eco
 import voice
 import drawing
 import books
-from common import serialize_message
+from common import *
+
+DEBUG = False
 
 try:
     eco.load_eco('eco')
 except Exception as err:
-    print(err)
     print(
         "Could not load eco files. Make sure there's an 'eco' folder in the root with these files: https://github.com/niklasf/eco"
     )
+    if DEBUG:
+        print(err)
 
 # Global state
 games = {}
-task = None
-
-# Constants
-# Side
-BLACK = 0
-WHITE = 1
-
-# Run engine for
-ME = 0
-OPPONENT = 1
-BOTH = 2
+tasks = {}
+task_counter = 0
 
 
 class GameObject():
@@ -43,11 +37,11 @@ class GameObject():
         self.board: chess.Board = board
         self.engine: chess.engine.EngineProtocol = None
         self.transport: asyncio.transports.SubprocessTransport = None
-        self.visible = True
         self.missed_moves = False
         self.side = WHITE
         self.running = True
         self.arrows = defaultdict(list)
+        self.analysing = False
 
     def should_run(self):
         run_for = settings.config.getint('gui', 'run')
@@ -83,7 +77,12 @@ def read_book(book, opening_moves, game, line, response):
 async def close_engine(game):
     if game.engine is not None:
         print('Closing engine.')
-        await game.engine.quit()
+        try:
+            await game.engine.quit()
+        except Error as err:
+            print('Error while quitting engine')
+            if DEBUG:
+                print(err)
         game.engine = None
         game.transport = None
 
@@ -96,7 +95,7 @@ async def configure_engine(engine):
                 await engine.configure({key: value})
 
 
-async def run_engine(uid, ws):
+async def run_engine(uid, ws, task):
     game: GameObject = games[uid]
     if game.engine is None:
         try:
@@ -221,6 +220,8 @@ async def run_engine(uid, ws):
         print("Starting analysis with limit", limit, "for", multi_pv,
               "pv(s)")
         try:
+            await cancel_tasks(task)
+            tasks[task]['cancelable'] = True
             results = await game.engine.analyse(
                 board=game.board,
                 limit=limit,
@@ -230,8 +231,11 @@ async def run_engine(uid, ws):
             )
         except Exception as err:
             print('Engine analysis failed.')
-            print(err)
+            if DEBUG:
+                print(err)
             return
+        finally:
+            tasks[task]['cancelable'] = False
 
         best_move = game.board.san(results[0].pv[0])
         multipv_data = []
@@ -286,26 +290,23 @@ async def run_engine(uid, ws):
     game.missed_moves = False
 
 
-async def update_board(game, data, uid, ws, fen):
+async def update_board(game, data, uid, ws, fen, task):
     game.board.reset()
     if fen:
         game.board.set_fen(data)
     else:
         for move in data:
-            if not game.board.is_game_over():
-                try:
-                    game.board.push_san(move)
-                except ValueError as err:
+            try:
+                game.board.push_san(move)
+            except ValueError as err:
+                print("Invalid SAN value")
+                if DEBUG:
                     print(err)
 
-    if game.visible:
-        await run_engine(uid, ws)
-    else:
-        print('Missed a move on:', uid)
-        game.missed_moves = True
+    await run_engine(uid, ws, task)
 
 
-async def handle_message(message, uid, ws):
+async def handle_message(message, uid, ws, task):
     # Initialize game object with a new board
     if uid not in games:
         games[uid] = GameObject(chess.Board())
@@ -313,13 +314,13 @@ async def handle_message(message, uid, ws):
     # Shorthand for the game
     game = games[uid]
 
-    # Parse json message to python
+    # Parse json message
     data = json.loads(message)
 
     # Handle setting changes before engine is initialized
     if data['type'] == 'setting':
         rerun_engine = await settings.update_settings(data['data'], game, ws, uid)
-        if not rerun_engine:
+        if rerun_engine == CLOSE:
             await close_engine(game)
 
         if data['data']['key'] == 'engine_path':
@@ -337,30 +338,21 @@ async def handle_message(message, uid, ws):
                     await websocket.send(serialize_message('error', 'Invalid engine path.'))
             except Exception as err:
                 print('Initializing engine failed.')
-                print(err)
+                if DEBUG:
+                    print(err)
 
-        if rerun_engine:
-            await run_engine(uid, ws)
+        if rerun_engine == RERUN:
+            await run_engine(uid, ws, task)
 
     elif data['type'] == 'engine_setting':
         await settings.update_engine_settings(data['data'])
-        await run_engine(uid, ws)
-
-    elif data['type'] == 'visibility':
-        game.visible = data['data']
-        print(f'Game {uid} {"visible" if game.visible else "hidden"}')
-        # Launch or close engine based on visibility
-        if not game.visible:
-            await close_engine(game)
-        # Run engine if there were any missed moves while game was not visible
-        if game.visible and game.missed_moves:
-            await run_engine(uid, ws)
+        await run_engine(uid, ws, task)
 
     elif data['type'] == 'moves':
-        await update_board(game, data['data'], uid, ws, False)
+        await update_board(game, data['data'], uid, ws, False, task)
 
     elif data['type'] == 'fen':
-        await update_board(game, data['data'], uid, ws, True)
+        await update_board(game, data['data'], uid, ws, True, task)
 
     elif data['type'] == 'clear_hash':
         if game.engine is not None:
@@ -379,15 +371,26 @@ async def handle_message(message, uid, ws):
         print('Unknown message', data)
 
 
-async def cleanup(uid):
-    if uid in games:
-        if games[uid].engine is not None:
-            await games[uid].engine.quit()
-        del games[uid]
+async def cancel_tasks(current_task):
+    done = []
+    for task_index, task in tasks.items():
+        if task['task'].done():
+            done.append(task_index)
+        if task != current_task and task['cancelable'] == True:
+            task['task'].cancel()
+            try:
+                await task['task']
+            except asyncio.CancelledError:
+                done.append(task_index)
+                print(f'Task {current_task} is now cancelled.')
+
+    for t in done:
+        del tasks[t]
 
 
 async def connection_handler(websocket, path):
-    global task
+    global tasks
+    global task_counter
     try:
         print('Client connected', path)
         # Send default settings values to client
@@ -406,30 +409,31 @@ async def connection_handler(websocket, path):
 
         async for message in websocket:
             try:
-                if task is not None and not task.done():
-                    task.cancel()
-                    try:
-                        await task
-                    except asyncio.CancelledError:
-                        print("Handle message is now cancelled.")
-
+                task_counter += 1
                 task = asyncio.create_task(
-                    handle_message(message, path, websocket))
+                    handle_message(message, path, websocket, task_counter),
+                    name=task_counter
+                )
+                tasks[task_counter] = {'task': task, 'cancelable': False}
             except Exception as err:
-                print(err)
                 print("Something went wrong. Keep trying...")
+                if DEBUG:
+                    print(err)
 
         print('Connection closed', path)
 
-        await cleanup(path)
     except websockets.ConnectionClosed as err:
-        print(err)
-        await cleanup(path)
+        print("WebSocket connection closed.")
+        print("Please restart the server.")
+        if DEBUG:
+            print(err)
+        await games[path].engine.quit()
+        del games[path]
 
 
 start_server = websockets.serve(connection_handler, '127.0.0.1', 5678)
 asyncio.get_event_loop().run_until_complete(start_server)
-print('Looking for connections...')
+print('Waiting for connections...')
 asyncio.get_event_loop().run_forever()
 
 # Clean up

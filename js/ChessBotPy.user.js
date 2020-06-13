@@ -6,7 +6,7 @@
 // @match       *://chess24.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     5.1
+// @version     6.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -70,22 +70,33 @@ function hotkey(e) {
 	}
 	switch (e.code) {
 		case 'KeyW':
-			console.log('Playing as white');
-			app.playingAs = 1;
-			ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 1 } }));
+			if (app.playingAs !== WHITE) {
+				console.log('Playing as white');
+				app.playingAs = 1;
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 1 } }));
+			}
 			break;
 		case 'KeyQ':
-			console.log('Playing as black');
-			app.playingAs = 0;
-			ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
+			if (app.playingAs != BLACK) {
+				console.log('Playing as black');
+				app.playingAs = 0;
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: 0 } }));
+			}
+			break;
 		case 'KeyA':
-			console.log('Resuming');
-			app.running = true;
-			ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: true } }));
+			if (!app.running) {
+				console.log('Resuming');
+				app.running = true;
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: true } }));
+			}
+			break;
 		case 'KeyS':
-			console.log('Stopping');
-			app.running = false;
-			ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: false } }));
+			if (app.running) {
+				console.log('Stopping');
+				app.running = false;
+				ws.send(JSON.stringify({ type: 'setting', data: { key: 'running', value: false } }));
+			}
+			break;
 		default:
 			break;
 	}
@@ -93,9 +104,11 @@ function hotkey(e) {
 
 function updateSide() {
 	let side = siteMap[host].sideFinder();
-	app.playingAs = side;
-	console.log('Starting as', side == 0 ? 'black' : 'white');
-	ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: side } }));
+	if (app.playingAs !== side) {
+		app.playingAs = side;
+		console.log('Starting as', side == 0 ? 'black' : 'white');
+		ws.send(JSON.stringify({ type: 'setting', data: { key: 'side', value: side } }));
+	}
 }
 
 function range(start, end) {
@@ -716,7 +729,7 @@ const main = async () => {
 			board: '',
 			messages: [],
 			enginePath: '',
-			playingAs: 0,
+			playingAs: WHITE,
 			runEngineFor: 0,
 			useDepth: true,
 			depth: 8,
@@ -810,11 +823,6 @@ const main = async () => {
 				console.log(data);
 		}
 	};
-
-	doc.addEventListener('visibilitychange', () => {
-		ws.send(JSON.stringify({ type: 'visibility', data: !doc.hidden }));
-		console.log(`Game ${doc.hidden ? 'Page is hidden' : 'Page is visible'}`);
-	});
 
 	doc.addEventListener('keydown', hotkey);
 	await findGame();
