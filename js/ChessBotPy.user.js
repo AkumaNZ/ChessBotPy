@@ -56,6 +56,12 @@ let siteMap = {
 		boardTarget: '.chess-board > .svg',
 		sideFinder: () => (doc.querySelector('.bottom .playerInfo.black') != null ? BLACK : WHITE),
 	},
+	'gameknot.com': {
+		observerTarget: '#chess-board-moves',
+		sanTarget: '.fig-all',
+		boardTarget: '#chess-board-acboard',
+		sideFinder: () => (doc.querySelector('#chess-board-my-side-color .player_white') != null ? WHITE : BLACK),
+	},
 };
 
 function uuidv4() {
