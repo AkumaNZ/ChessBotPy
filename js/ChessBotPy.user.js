@@ -57,10 +57,10 @@ let siteMap = {
 		sideFinder: () => (doc.querySelector('.bottom .playerInfo.black') != null ? BLACK : WHITE),
 	},
 	'gameknot.com': {
-		observerTarget: '#chess-board-moves',
+		observerTarget: '#chess-board-moves, #game-board-moves',
 		sanTarget: '.fig-all',
-		boardTarget: '#chess-board-acboard',
-		sideFinder: () => (doc.querySelector('#chess-board-my-side-color .player_white') != null ? WHITE : BLACK),
+		boardTarget: '#chess-board-acboard, #game-board-acboard',
+		sideFinder: () => (doc.querySelector('#chess-board-my-side-color .player_white, #game-board-my-side-color .player_white') != null ? WHITE : BLACK),
 	},
 };
 
