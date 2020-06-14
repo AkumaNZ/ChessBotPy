@@ -218,7 +218,7 @@ function drawOnScreen() {
 	overlay.style.width = width + 'px';
 	overlay.style.gridTemplateAreas = generateGridAreas();
 
-	var turn = app.pvs[0] ? +app.pvs[0].turn : 0;
+	var turn = app.turn;
 	var lanMoves = app.pvs.map((x) => x.lan);
 	var lanPV = lanMoves[app.selectedPV - 1];
 
@@ -741,22 +741,20 @@ const main = async () => {
 			runEngineFor: 0,
 			useDepth: true,
 			depth: 8,
-			useTime: false,
+			useTime: true,
 			time: 1.0,
 			engineSettings: [],
 			drawBoard: true,
 			useVoice: true,
 			multipv: 1,
-			book1: '',
-			book2: '',
-			book3: '',
-			book4: '',
 			logEngine: '',
 			useBook: true,
 			drawOverlay: true,
 			pvs: [],
 			selectedPV: 1,
 			running: true,
+			turn: 0,
+			current_eco: ''
 		},
 		methods: {
 			handleSettingChange(event, key, type) {
@@ -822,7 +820,9 @@ const main = async () => {
 				console.log('Received engine settings');
 				break;
 			case 'multipv':
-				app.pvs = data.message;
+				app.pvs = data.message.multipv;
+				app.turn = data.message.turn;
+				app.currentEco = data.message.current_eco
 				app.selectedPV = 1;
 				drawOnScreen();
 				break;

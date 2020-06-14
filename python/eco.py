@@ -1,4 +1,3 @@
-import io
 from os import listdir
 from os.path import isfile, join
 
@@ -12,13 +11,10 @@ def load_eco(path):
         print("Loading eco file:", full_path)
         with open(full_path, encoding="utf-8") as handle:
             for line in handle.readlines():
-                elements = line.split('\t')
+                elements = line.split("\t")
                 openings[elements[2]] = elements[1]
 
 
 def get_name(epd):
     name = openings.get(epd)
-    if name:
-        return name
-    else:
-        return ""
+    return name if name else ""

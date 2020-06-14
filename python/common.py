@@ -17,4 +17,4 @@ NOOP = 2
 
 
 def serialize_message(target: str, message):
-    return json.dumps({'target': target, 'message': message})
+    return json.dumps({"target": target, "message": message})
