@@ -7,7 +7,7 @@
 // @match       *://gameknot.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     6.0
+// @version     7.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -37,31 +37,42 @@ if (window.opener != null) {
 
 let siteMap = {
 	'lichess.org': {
-		observerTarget: '.rmoves, .tview2',
-		sanTarget: 'm2, move',
-		boardTarget: '.cg-wrap',
+		movesSelector: '.rmoves, .tview2',
+		sanSelector: 'm2, move',
+		overlaySelector: '.cg-wrap',
+		analysisSelector: '.analyse__tools',
 		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK),
 	},
 	'www.chess.com': {
-		observerTarget:
-			'.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
-		sanTarget: '.move-text-component, .gotomove, .move-list-controls-move',
-		boardTarget: '#chessboard_boardarea, .board-layout-chessboard, .board-board',
-		sideFinder: () =>
-			doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE,
+		movesSelector: '.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
+		sanSelector: '.move-text-component, .gotomove, .move-list-controls-move',
+		overlaySelector: '#chessboard_boardarea, .board-layout-chessboard, .board-board',
+		analysisSelector: '.with-analysis',
+		sideFinder: () => (doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE),
 	},
 	'chess24.com': {
-		observerTarget: '.Moves',
-		sanTarget: '.move',
-		boardTarget: '.chess-board > .svg',
+		movesSelector: '.Moves',
+		sanSelector: '.move',
+		overlaySelector: '.chess-board > .svg',
+		analysisSelector: '.with-analysis',
 		sideFinder: () => (doc.querySelector('.bottom .playerInfo.black') != null ? BLACK : WHITE),
 	},
 	'gameknot.com': {
-		observerTarget: '#chess-board-moves, #game-board-moves',
-		sanTarget: '.fig-all',
-		boardTarget: '#chess-board-acboard, #game-board-acboard',
-		sideFinder: () => (doc.querySelector('#chess-board-my-side-color .player_white, #game-board-my-side-color .player_white') != null ? WHITE : BLACK),
+		movesSelector: '#chess-board-moves, #game-board-moves',
+		sanSelector: '.fig-all',
+		overlaySelector: '#chess-board-acboard, #game-board-acboard',
+		analysisSelector: '.with-analysis',
+		sideFinder: () =>
+			doc.querySelector('#chess-board-my-side-color .player_white, #game-board-my-side-color .player_white') != null ? WHITE : BLACK,
 	},
+};
+
+cleanse = (x) => {
+	chars = ['↵', '✓'];
+	for (let c of chars) {
+		x = x.replace(c, '');
+	}
+	return x.trim();
 };
 
 function uuidv4() {
@@ -181,6 +192,16 @@ function createBox(square, color, width, height) {
 	return box;
 }
 
+function createArrow(from, to, color, size) {
+	var svg = document.createElement('svg');
+	// <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 40 400 200">
+	// 	<marker id="triangle" viewBox="0 0 10 10" refX="0" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
+	// 		<path d="M 0 0 L 10 5 L 0 10 z"/>
+	// 	</marker>
+	// 	<line x1="100" y1="50.5" x2="300" y2="50.5" marker-end="url(#triangle)" stroke="black" stroke-width="10"/>
+	// </svg>
+}
+
 function drawBox(overlay, move, turn, width, height) {
 	colors = {
 		0: ['hsla(350, 100%, 50%, 0.66)', 'hsla(340, 100%, 50%, 0.66)'], // BLACK
@@ -201,7 +222,7 @@ function drawOnScreen() {
 		return;
 	}
 
-	var boardElement = doc.querySelector(siteMap[host].boardTarget);
+	var boardElement = doc.querySelector(siteMap[host].overlaySelector);
 	var { width, height, top, left } = boardElement.getBoundingClientRect();
 	var overlay = doc.createElement('div');
 	overlay.id = 'py-overlay';
@@ -218,7 +239,7 @@ function drawOnScreen() {
 	overlay.style.width = width + 'px';
 	overlay.style.gridTemplateAreas = generateGridAreas();
 
-	var turn = app.turn;
+	var turn = +app.turn;
 	var lanMoves = app.pvs.map((x) => x.lan);
 	var lanPV = lanMoves[app.selectedPV - 1];
 
@@ -236,7 +257,7 @@ function drawOnScreen() {
 }
 
 const findGame = async () => {
-	await waitForElement(siteMap[host].sanTarget, 1);
+	await waitForElement(siteMap[host].sanSelector, 1);
 	// Get the side you're plaing as
 	updateSide();
 	let boardSize = 0;
@@ -245,7 +266,7 @@ const findGame = async () => {
 		await sleep(50);
 
 		// Force resizing because sometimes elements are dynamic and event listeners get broken
-		let boardElement = doc.querySelector(siteMap[host].boardTarget);
+		let boardElement = doc.querySelector(siteMap[host].overlaySelector);
 		if (boardElement) {
 			let newBoardSize = boardElement.getBoundingClientRect().width;
 			if (newBoardSize != boardSize) {
@@ -266,9 +287,7 @@ const findGame = async () => {
 			}
 		}
 		// Get moves through SAN
-		let moves = [...doc.querySelectorAll(siteMap[host].sanTarget)]
-			.map((x) => x.innerText.trim())
-			.filter((x) => x != '');
+		let moves = [...doc.querySelectorAll(siteMap[host].sanSelector)].map((x) => cleanse(x.innerText)).filter((x) => x != '');
 
 		// Number of moves changed, update all the things!
 		if (moves.length != numOfMoves) {
@@ -323,10 +342,16 @@ const loadCSS = (url) => {
 
 const main = async () => {
 	if (window.location.href != `${origin}/.css`) {
-		let element = await waitForElement(siteMap[host].observerTarget, 60);
+		let element = await waitForElement(siteMap[host].movesSelector, 60);
 		if (element == null) {
 			return;
 		}
+
+		let hasAnalysis = (await waitForElement(siteMap[host].analysisSelector, 1)) != null;
+		if (hasAnalysis) {
+			return;
+		}
+
 		popup = window.open(`${origin}/.css`, '_blank');
 		window.addEventListener('beforeunload', function () {
 			popup.close();
@@ -451,8 +476,25 @@ const main = async () => {
 		border-radius: 9999px;
 		cursor: pointer;
 	}
+
+	.text-shadow {
+		text-shadow: 0 2px 4px rgba(0,0,0,0.10);
+	}
+
+	.text-shadow-md {
+		text-shadow: 0 4px 8px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08);
+	}
+
+	.text-shadow-lg {
+		text-shadow: 0 15px 30px rgba(0,0,0,0.11), 0 5px 15px rgba(0,0,0,0.08);
+	}
+
+	.text-shadow-none {
+		text-shadow: none;
+	}
+		
 	// Generated tailwindcss goes here
-	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}b{font-weight:bolder}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}h1,pre{margin:0}button{background-color:transparent;background-image:none;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{box-sizing:border-box;border:0 solid #e2e8f0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-700{--bg-opacity:1;background-color:#4a5568;background-color:rgba(74,85,104,var(--bg-opacity))}.bg-gray-800{--bg-opacity:1;background-color:#2d3748;background-color:rgba(45,55,72,var(--bg-opacity))}.bg-gray-900{--bg-opacity:1;background-color:#1a202c;background-color:rgba(26,32,44,var(--bg-opacity))}.bg-indigo-500{--bg-opacity:1;background-color:#667eea;background-color:rgba(102,126,234,var(--bg-opacity))}.hover\\:bg-indigo-600:hover{--bg-opacity:1;background-color:#5a67d8;background-color:rgba(90,103,216,var(--bg-opacity))}.border-gray-500{--border-opacity:1;border-color:#a0aec0;border-color:rgba(160,174,192,var(--border-opacity))}.border-gray-700{--border-opacity:1;border-color:#4a5568;border-color:rgba(74,85,104,var(--border-opacity))}.border-gray-900{--border-opacity:1;border-color:#1a202c;border-color:rgba(26,32,44,var(--border-opacity))}.border-indigo-500{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.hover\\:border-indigo-400:hover{--border-opacity:1;border-color:#7f9cf5;border-color:rgba(127,156,245,var(--border-opacity))}.focus\\:border-indigo-500:focus{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.border{border-width:1px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.flex-row{flex-direction:row}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.font-sans{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-10{height:2.5rem}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{--text-opacity:1;color:#fff;color:rgba(255,255,255,var(--text-opacity))}.text-gray-100{--text-opacity:1;color:#f7fafc;color:rgba(247,250,252,var(--text-opacity))}.text-gray-200{--text-opacity:1;color:#edf2f7;color:rgba(237,242,247,var(--text-opacity))}.text-gray-400{--text-opacity:1;color:#cbd5e0;color:rgba(203,213,224,var(--text-opacity))}.text-gray-500{--text-opacity:1;color:#a0aec0;color:rgba(160,174,192,var(--text-opacity))}.text-gray-600{--text-opacity:1;color:#718096;color:rgba(113,128,150,var(--text-opacity))}.text-gray-700{--text-opacity:1;color:#4a5568;color:rgba(74,85,104,var(--text-opacity))}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.w-1{width:.25rem}.w-4{width:1rem}.w-6{width:1.5rem}.w-32{width:8rem}.w-40{width:10rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}.lg\\:overflow-y-auto{overflow-y:auto}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
+	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}b{font-weight:bolder}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}h1,pre{margin:0}button{background-color:transparent;background-image:none;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{box-sizing:border-box;border:0 solid #e2e8f0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-700{--bg-opacity:1;background-color:#4a5568;background-color:rgba(74,85,104,var(--bg-opacity))}.bg-gray-800{--bg-opacity:1;background-color:#2d3748;background-color:rgba(45,55,72,var(--bg-opacity))}.bg-gray-900{--bg-opacity:1;background-color:#1a202c;background-color:rgba(26,32,44,var(--bg-opacity))}.bg-indigo-500{--bg-opacity:1;background-color:#667eea;background-color:rgba(102,126,234,var(--bg-opacity))}.hover\\:bg-indigo-600:hover{--bg-opacity:1;background-color:#5a67d8;background-color:rgba(90,103,216,var(--bg-opacity))}.border-gray-500{--border-opacity:1;border-color:#a0aec0;border-color:rgba(160,174,192,var(--border-opacity))}.border-gray-700{--border-opacity:1;border-color:#4a5568;border-color:rgba(74,85,104,var(--border-opacity))}.border-gray-900{--border-opacity:1;border-color:#1a202c;border-color:rgba(26,32,44,var(--border-opacity))}.border-indigo-500{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.hover\\:border-indigo-400:hover{--border-opacity:1;border-color:#7f9cf5;border-color:rgba(127,156,245,var(--border-opacity))}.focus\\:border-indigo-500:focus{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.border{border-width:1px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.flex-row{flex-direction:row}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.font-sans{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-10{height:2.5rem}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{--text-opacity:1;color:#fff;color:rgba(255,255,255,var(--text-opacity))}.text-gray-100{--text-opacity:1;color:#f7fafc;color:rgba(247,250,252,var(--text-opacity))}.text-gray-200{--text-opacity:1;color:#edf2f7;color:rgba(237,242,247,var(--text-opacity))}.text-gray-400{--text-opacity:1;color:#cbd5e0;color:rgba(203,213,224,var(--text-opacity))}.text-gray-500{--text-opacity:1;color:#a0aec0;color:rgba(160,174,192,var(--text-opacity))}.text-gray-600{--text-opacity:1;color:#718096;color:rgba(113,128,150,var(--text-opacity))}.text-gray-700{--text-opacity:1;color:#4a5568;color:rgba(74,85,104,var(--text-opacity))}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.w-1{width:.25rem}.w-4{width:1rem}.w-6{width:1.5rem}.w-32{width:8rem}.w-40{width:10rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}.lg\\:overflow-y-auto{overflow-y:auto}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
 	`;
 
 	let head = document.getElementsByTagName('head')[0];
@@ -700,6 +742,7 @@ const main = async () => {
 			</div>
 
 			<div id="board" class="bg-gray-800 p-3" >
+				<span class='font-display text-gray-200 fixed text-shadow'>{{currentEco}}</span>
 				<div id="board-container" v-html="board" v-if="drawBoard"></div>
 			</div>
 
@@ -754,7 +797,8 @@ const main = async () => {
 			selectedPV: 1,
 			running: true,
 			turn: 0,
-			current_eco: ''
+			currentEco: '',
+			analysis: false,
 		},
 		methods: {
 			handleSettingChange(event, key, type) {
@@ -822,7 +866,7 @@ const main = async () => {
 			case 'multipv':
 				app.pvs = data.message.multipv;
 				app.turn = data.message.turn;
-				app.currentEco = data.message.current_eco
+				app.currentEco = data.message.current_eco;
 				app.selectedPV = 1;
 				drawOnScreen();
 				break;
