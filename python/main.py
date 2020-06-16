@@ -15,7 +15,7 @@ import drawing
 import books
 from common import *
 
-DEBUG = False
+DEBUG = True
 
 
 class GameObject:
@@ -191,7 +191,7 @@ async def run_engine(uid, ws, task):
             }
 
             multi_pv.append(line)
-        await ws.send(serialize_message("multipv", {"multipv": multi_pv, "turn": game.board.turn, "current_eco": game.eco}))
+        await ws.send(serialize_message("multipv", {"multipv": multi_pv, "turn": game.board.turn, "current_eco": game.eco, "book": True}))
     else:
         # If there no opening moves were found, use engine to analyse instead
         if game.engine is None:
@@ -254,7 +254,9 @@ async def run_engine(uid, ws, task):
                 "eco": eco.get_name(epd),
             }
             multipv_data.append(unit)
-        await ws.send(serialize_message("multipv", {"multipv": multipv_data, "turn": game.board.turn, "current_eco": game.eco}))
+        await ws.send(
+            serialize_message("multipv", {"multipv": multipv_data, "turn": game.board.turn, "current_eco": game.eco, "book": False})
+        )
     print("Best move:", best_move)
 
     if settings.config.getboolean("gui", "draw_board"):
