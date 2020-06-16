@@ -23,6 +23,7 @@ def initialize_settings_file():
         "clear_log": True,
         "use_book": True,
         "draw_overlay": True,
+        "draw_pvs": True,
         "draw_evalbar": True,
     }
     with open("settings.ini", "w") as config_file:
@@ -157,4 +158,5 @@ def get_mapped_settings():
     yield {"key": "logEngine", "value": config.getboolean("gui", "clear_log")}
     yield {"key": "useBook", "value": config.getboolean("gui", "use_book")}
     yield {"key": "drawOverlay", "value": config.getboolean("gui", "draw_overlay")}
-    yield {"key": "drawOverlay", "value": config.getboolean("gui", "draw_evalbar")}
+    yield {"key": "drawEvalbar", "value": config.getboolean("gui", "draw_evalbar")}
+    yield {"key": "drawPVs", "value": config.getboolean("gui", "draw_pvs")}

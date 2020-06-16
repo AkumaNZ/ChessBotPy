@@ -636,6 +636,16 @@ const main = async () => {
 						<div class="inline-flex flex-col mb-4">
 							<label class="checkbox inline-flex cursor-pointer relative mb-2">
 								<input
+									type="checkbox" v-model="drawPVs" @change="handleSettingChange($event, 'draw_pvs', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Show principal variations">Draw principal variations</span>
+							</label>
+						</div>
+
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
 									type="checkbox" v-model="useVoice" @change="handleSettingChange($event, 'use_voice', 'checkbox')"
 									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 								>
@@ -749,7 +759,7 @@ const main = async () => {
 			</div>
 
 			<div id="pvs" class="bg-gray-800 p-3 lg:overflow-y-auto">
-				<div class="flex flex-row flex-wrap">
+				<div class="flex flex-row flex-wrap" v-if="drawPVs">
 					<div
 						v-for="(line, pv_index) in pvs"
 						@click="onSelectPV(pv_index + 1)"
@@ -796,6 +806,7 @@ const main = async () => {
 			useBook: true,
 			drawOverlay: true,
 			drawEvalbar: true,
+			drawPVs: true,
 			pvs: [],
 			selectedPV: 1,
 			running: true,
