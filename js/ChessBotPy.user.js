@@ -7,7 +7,7 @@
 // @match       *://gameknot.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     7.0
+// @version     7.1
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -554,6 +554,15 @@ const main = async () => {
 					</div>
 
 					<div class='inline-flex flex-col'>
+					
+						<div class="inline-flex flex-col mb-4">
+							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
+							<input
+								type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
+								class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
+							>
+						</div>
+
 						<div class="inline-flex flex-col mr-10 mb-4">
 							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Limit</span>
 							<label class="checkbox inline-flex cursor-pointer relative mb-2">
@@ -593,14 +602,6 @@ const main = async () => {
 					</div>
 
 					<div class='inline-flex flex-col'>
-						<div class="inline-flex flex-col mb-4">
-							<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Engine path</span>
-							<input
-								type="text" v-model="enginePath" @change="handleSettingChange($event, 'engine_path', 'path')" :title="enginePath"
-								class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
-							>
-						</div>
-
 						<span class="text-gray-500 font-display font-bold mb-2 text-xs uppercase tracking-wide">Misc settings</span>
 
 						<div class="inline-flex flex-col mb-4">
