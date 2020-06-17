@@ -25,6 +25,7 @@ def initialize_settings_file():
         "draw_overlay": True,
         "draw_pvs": True,
         "draw_evalbar": True,
+        "piece_only": False,
     }
     with open("settings.ini", "w") as config_file:
         config.write(config_file)
@@ -160,3 +161,4 @@ def get_mapped_settings():
     yield {"key": "drawOverlay", "value": config.getboolean("gui", "draw_overlay")}
     yield {"key": "drawEvalbar", "value": config.getboolean("gui", "draw_evalbar")}
     yield {"key": "drawPVs", "value": config.getboolean("gui", "draw_pvs")}
+    yield {"key": "pieceOnly", "value": config.getboolean("gui", "piece_only")}

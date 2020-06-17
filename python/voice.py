@@ -57,8 +57,8 @@ def parse_speech(move: str):
     return sentence
 
 
-def say(message):
-    tts = parse_speech(message)
+def say(message: str, literal: bool):
+    tts = message if literal else parse_speech(message)
     speech.stop()
     speech.say(tts)
     speech.iterate()

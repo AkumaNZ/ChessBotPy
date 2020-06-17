@@ -131,7 +131,10 @@ async def run_engine(uid, ws, task):
 
     if len(opening_moves) > 0:
         opening_moves = sorted(opening_moves, key=lambda x: sum([y.weight for y in x]), reverse=True)
+
         best_move = game.board.san(opening_moves[0][0].move)
+        best_piece = chess.piece_name(game.board.piece_at(opening_moves[0][0].move.from_square).piece_type).capitalize()
+
         opening_dict = defaultdict(list)
 
         for move, *reply in opening_moves:
@@ -191,7 +194,11 @@ async def run_engine(uid, ws, task):
             }
 
             multi_pv.append(line)
-        await ws.send(serialize_message("multipv", {"multipv": multi_pv, "turn": game.board.turn, "current_eco": game.eco, "book": True}))
+        await ws.send(
+            serialize_message(
+                "multipv", {"multipv": multi_pv, "turn": game.board.turn, "current_eco": game.eco, "book": True, "best_piece": best_piece}
+            )
+        )
     else:
         # If there no opening moves were found, use engine to analyse instead
         if game.engine is None:
@@ -214,6 +221,8 @@ async def run_engine(uid, ws, task):
             tasks[task]["cancelable"] = False
 
         best_move = game.board.san(results[0].pv[0])
+        best_piece = chess.piece_name(game.board.piece_at(results[0].pv[0].from_square).piece_type).capitalize()
+
         multipv_data = []
         for multi_pv in results:
             move_counter = 0
@@ -255,16 +264,23 @@ async def run_engine(uid, ws, task):
             }
             multipv_data.append(unit)
         await ws.send(
-            serialize_message("multipv", {"multipv": multipv_data, "turn": game.board.turn, "current_eco": game.eco, "book": False})
+            serialize_message(
+                "multipv",
+                {"multipv": multipv_data, "turn": game.board.turn, "current_eco": game.eco, "book": False, "best_piece": best_piece},
+            )
         )
-    print("Best move:", best_move)
+
+    print("Best move:", best_piece if settings.config.getboolean("gui", "piece_only") else best_move)
 
     if settings.config.getboolean("gui", "draw_board"):
         svg = drawing.draw_svg_board(game, 1)
         await ws.send(serialize_message("board", svg))
 
     if settings.config.getboolean("gui", "use_voice"):
-        voice.say(best_move)
+        if settings.config.getboolean("gui", "piece_only"):
+            voice.say(best_piece, True)
+        else:
+            voice.say(best_move, False)
     game.missed_moves = False
 
 
@@ -400,7 +416,7 @@ async def connection_handler(websocket, path):
         print("Please restart the server.")
         if DEBUG:
             print(err)
-        await games[path].engine.quit()
+        await close_engine(games[path])
         del games[path]
 
 

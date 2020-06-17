@@ -7,7 +7,7 @@
 // @match       *://gameknot.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     7.1
+// @version     8.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -181,37 +181,6 @@ function parseLAN(LAN, turn) {
 	return { from: from.slice(-2), to: to.slice(0, 2) };
 }
 
-function createBox(square, color, width, height) {
-	var box = document.createElement('div');
-	box.style.width = width / 8 + 'px';
-	box.style.height = height / 8 + 'px';
-	box.style.border = `4px solid ${color}`;
-	box.style.pointerEvents = 'none';
-	box.style.gridArea = square;
-	box.style.boxSizing = 'border-box';
-	return box;
-}
-
-function createArrow(from, to, color, size) {
-	var svg = document.createElement('svg');
-	// <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 40 400 200">
-	// 	<marker id="triangle" viewBox="0 0 10 10" refX="0" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
-	// 		<path d="M 0 0 L 10 5 L 0 10 z"/>
-	// 	</marker>
-	// 	<line x1="100" y1="50.5" x2="300" y2="50.5" marker-end="url(#triangle)" stroke="black" stroke-width="10"/>
-	// </svg>
-}
-
-function drawBox(overlay, move, turn, width, height) {
-	colors = {
-		0: ['hsla(350, 100%, 50%, 0.66)', 'hsla(340, 100%, 50%, 0.66)'], // BLACK
-		1: ['hsla(145, 100%, 50%, 0.66)', 'hsla(155, 100%, 50%, 0.66)'], // WHITE
-	};
-	var { from, to } = parseLAN(move, turn);
-	overlay.appendChild(createBox(from, colors[turn][0], width, height));
-	overlay.appendChild(createBox(to, colors[turn][1], width, height));
-}
-
 function drawOnScreen() {
 	var existing = doc.getElementById('py-overlay');
 	if (existing) {
@@ -230,30 +199,76 @@ function drawOnScreen() {
 	overlay.style.position = 'absolute';
 	overlay.style.zIndex = '99999';
 	overlay.style.pointerEvents = 'none';
-	overlay.style.gridTemplateRows = 'repeat(8, 1fr)';
-	overlay.style.gridTemplateColumns = 'repeat(8, 1fr)';
-	overlay.style.width = width + 'px';
-	overlay.style.height = height + 'px';
-	overlay.style.top = top + 'px';
-	overlay.style.left = left + 'px';
-	overlay.style.width = width + 'px';
-	overlay.style.gridTemplateAreas = generateGridAreas();
 
-	var turn = +app.turn;
-	var lanMoves = app.pvs.map((x) => x.lan);
-	var lanPV = lanMoves[app.selectedPV - 1];
+	if (app.pieceOnly) {
+		overlay.style.top = top + height + 8 + 'px';
+		overlay.style.left = left + 'px';
+		overlay.style.width = 200 + 'px';
+		overlay.style.height = 100 + 'px';
 
-	// If Im playing as black, and it's my turn, then draw as black
+		let span = doc.createElement('span');
+		span.innerText = app.bestPiece;
+		span.style.color = 'white';
+		span.style.fontSize = '1.5rem';
+		span.style.textShadow = '0px 0px 5px #000';
+		span.style.marginTop = '4px';
+		span.style.marginLeft = '4px';
+		overlay.appendChild(span);
+	} else {
+		overlay.style.gridTemplateRows = 'repeat(8, 1fr)';
+		overlay.style.gridTemplateColumns = 'repeat(8, 1fr)';
+		overlay.style.width = width + 'px';
+		overlay.style.height = height + 'px';
+		overlay.style.top = top + 'px';
+		overlay.style.left = left + 'px';
+		overlay.style.width = width + 'px';
+		overlay.style.gridTemplateAreas = generateGridAreas();
+		var turn = +app.turn;
+		var lanMoves = app.pvs.map((x) => x.lan);
+		var lanPV = lanMoves[app.selectedPV - 1];
 
-	if (lanPV && lanPV.length > 0) {
-		drawBox(overlay, lanPV[0], turn, width, height);
+		// If Im playing as black, and it's my turn, then draw as black
+
+		if (lanPV && lanPV.length > 0) {
+			drawBox(overlay, lanPV[0], turn, width);
+		}
+
+		if (lanPV && lanPV.length > 1) {
+			drawBox(overlay, lanPV[1], (turn + 1) % 2, width);
+		}
 	}
-
-	if (lanPV && lanPV.length > 1) {
-		drawBox(overlay, lanPV[1], (turn + 1) % 2, width, height);
-	}
-
 	doc.body.appendChild(overlay);
+}
+
+function createArrow(from, to, color, size) {
+	var svg = document.createElement('svg');
+	// <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 40 400 200">
+	// 	<marker id="triangle" viewBox="0 0 10 10" refX="0" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
+	// 		<path d="M 0 0 L 10 5 L 0 10 z"/>
+	// 	</marker>
+	// 	<line x1="100" y1="50.5" x2="300" y2="50.5" marker-end="url(#triangle)" stroke="black" stroke-width="10"/>
+	// </svg>
+}
+
+function drawBox(overlay, move, turn, size) {
+	colors = {
+		0: ['hsla(350, 100%, 50%, 0.66)', 'hsla(340, 100%, 50%, 0.66)'], // BLACK
+		1: ['hsla(145, 100%, 50%, 0.66)', 'hsla(155, 100%, 50%, 0.66)'], // WHITE
+	};
+	var { from, to } = parseLAN(move, turn);
+	overlay.appendChild(createBox(from, colors[turn][0], size));
+	overlay.appendChild(createBox(to, colors[turn][1], size));
+}
+
+function createBox(square, color, size) {
+	var box = document.createElement('div');
+	box.style.width = size / 8 + 'px';
+	box.style.height = size / 8 + 'px';
+	box.style.border = `4px solid ${color}`;
+	box.style.pointerEvents = 'none';
+	box.style.gridArea = square;
+	box.style.boxSizing = 'border-box';
+	return box;
 }
 
 const findGame = async () => {
@@ -673,6 +688,17 @@ const main = async () => {
 								<span class="ml-2" title="Load opening book files from 'books' folder">Use opening books</span>
 							</label>
 						</div>
+
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="pieceOnly" @change="handleSettingChange($event, 'piece_only', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Best move only tells you what piece to move">Piece only</span>
+							</label>
+						</div>
+
 					</div>
 				</div>
 				<div>
@@ -748,26 +774,31 @@ const main = async () => {
 			</div>
 
 			<div id="board" class="flex bg-gray-800 p-3">
-				<div class="flex items-end mr-3 bg-gray-100 w-10" v-if="drawEvalbar">
-					<div class="flex items-end justify-center text-sm font-display text-white bg-gray-900 w-10" :style="{ height: evalBarHeight + '%' }">
+				<div class="flex items-end mr-3 bg-gray-100 w-10" v-if="drawEvalbar" style="min-height: 30vh">
+					<div class="flex items-end justify-center text-sm font-display text-white bg-gray-900 w-10"
+						:style="{ height: evalBarHeight + '%' }">
 						<span class="text-gray-600"> {{ currentScore }} </span>
 					</div>
 				</div>
 				<div class="flex flex-col">
-					<span class='font-display text-gray-200'>{{currentEco}}</span>
-					<div id="board-container" v-html="board" v-if="drawBoard"></div>
+					<span class='font-display text-gray-200'>{{ currentEco }}</span>
+					<span class='font-display text-gray-200' v-if="pieceOnly">{{ bestPiece }}</span>
+					<div id="board-container" v-html="board" v-else-if="drawBoard"></div>
 				</div>
 			</div>
 
 			<div id="pvs" class="bg-gray-800 p-3 lg:overflow-y-auto">
-				<div class="flex flex-row flex-wrap" v-if="drawPVs">
+				<div class="text-white font-display text-xs tracking-wide" v-if="pieceOnly">
+					{{ bestPiece }}
+				</div>
+				<div class="flex flex-row flex-wrap" v-else-if="drawPVs">
 					<div
 						v-for="(line, pv_index) in pvs"
 						@click="onSelectPV(pv_index + 1)"
 						class="w-48 mr-4 mb-3 p-2 border-2 border-gray-500 rounded hover:border-indigo-400"
 						:class="{ 'border-indigo-500': selectedPV == pv_index + 1 }"
 					>
-						<div class="text-white font-display text-xs tracking-wide" :title="line.eco">
+						<div class="text-white font-display text-xs" :title="line.eco">
 							{{ line.eco }}
 						</div>
 						<div class="text-gray-500 font-display font-bold text-xs uppercase tracking-wide mb-2">
@@ -815,6 +846,8 @@ const main = async () => {
 			currentEco: '',
 			analysis: false,
 			book: false,
+			pieceOnly: false,
+			bestPiece: '',
 		},
 		computed: {
 			currentScore() {
@@ -902,6 +935,7 @@ const main = async () => {
 				app.turn = data.message.turn;
 				app.currentEco = data.message.current_eco;
 				app.book = data.message.book;
+				app.bestPiece = data.message.best_piece;
 				app.selectedPV = 1;
 				drawOnScreen();
 				break;
