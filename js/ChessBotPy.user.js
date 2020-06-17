@@ -202,14 +202,14 @@ function drawOnScreen() {
 
 	if (app.pieceOnly) {
 		overlay.style.top = top + height + 8 + 'px';
-		overlay.style.left = left + 'px';
+		overlay.style.left = left + width / 2 + 'px';
 		overlay.style.width = 200 + 'px';
 		overlay.style.height = 100 + 'px';
 
 		let span = doc.createElement('span');
 		span.innerText = app.bestPiece;
 		span.style.color = 'white';
-		span.style.fontSize = '1.5rem';
+		span.style.fontSize = '2rem';
 		span.style.textShadow = '0px 0px 5px #000';
 		span.style.marginTop = '4px';
 		span.style.marginLeft = '4px';
