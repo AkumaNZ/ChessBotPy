@@ -317,60 +317,71 @@ async def initialize_engine_settings(ws):
 
 
 async def handle_message(message, uid, ws):
-    # Initialize game object with a new board
-    if uid not in games:
-        games[uid] = GameObject(chess.Board())
+    try:
+        # Initialize game object with a new board
+        if uid not in games:
+            games[uid] = GameObject(chess.Board())
 
-    # Shorthand for the game
-    game = games[uid]
+        # Shorthand for the game
+        game = games[uid]
 
-    # Parse json message
-    data = json.loads(message)
+        # Parse json message
+        data = json.loads(message)
 
-    # Handle setting changes before engine is initialized
-    if data["type"] == "setting":
-        rerun_engine = await settings.update_settings(data["data"], game, ws, uid)
-        if rerun_engine == CLOSE:
-            await close_engine(game)
+        # Handle setting changes before engine is initialized
+        if data["type"] == "setting":
+            rerun_engine = await settings.update_settings(data["data"], game, ws, uid)
+            if rerun_engine == CLOSE:
+                await close_engine(game)
 
-        if data["data"]["key"] == "engine_path":
-            # Re-initialize engine settings file, and send engine settings to client if engine path was changed.
-            await close_engine(game)
-            try:
-                await initialize_engine_settings(ws)
-            except Exception as err:
-                print("Initializing engine failed.")
-                if DEBUG:
-                    print(err)
+            if data["data"]["key"] == "engine_path":
+                # Re-initialize engine settings file, and send engine settings to client if engine path was changed.
+                await close_engine(game)
+                try:
+                    await initialize_engine_settings(ws)
+                except Exception as err:
+                    print("Initializing engine failed.")
+                    if DEBUG:
+                        print(err)
 
-        if rerun_engine == RERUN:
+            if rerun_engine == RERUN:
+                await run_engine(uid, ws)
+
+        elif data["type"] == "engine_setting":
+            await settings.update_engine_settings(data["data"])
             await run_engine(uid, ws)
 
-    elif data["type"] == "engine_setting":
-        await settings.update_engine_settings(data["data"])
-        await run_engine(uid, ws)
+        elif data["type"] == "moves":
+            await update_board(game, data["data"], uid, ws, False)
 
-    elif data["type"] == "moves":
-        await update_board(game, data["data"], uid, ws, False)
+        elif data["type"] == "fen":
+            await update_board(game, data["data"], uid, ws, True)
 
-    elif data["type"] == "fen":
-        await update_board(game, data["data"], uid, ws, True)
+        elif data["type"] == "clear_hash":
+            if game.engine is not None:
+                print("Clearing hash...")
+                await game.engine.configure({"Clear Hash": True})
 
-    elif data["type"] == "clear_hash":
-        if game.engine is not None:
-            print("Clearing hash...")
-            await game.engine.configure({"Clear Hash": True})
+        elif data["type"] == "draw_svg":
+            print("Drawing board for PV", data["data"])
+            svg = drawing.draw_svg_board(game, data["data"])
+            await ws.send(serialize_message("board", svg))
 
-    elif data["type"] == "draw_svg":
-        print("Drawing board for PV", data["data"])
-        svg = drawing.draw_svg_board(game, data["data"])
-        await ws.send(serialize_message("board", svg))
+        elif "type" in data:
+            print("Unknown type", data["type"])
 
-    elif "type" in data:
-        print("Unknown type", data["type"])
-
-    else:
-        print("Unknown message", data)
+        else:
+            print("Unknown message", data)
+    except (websockets.ConnectionClosed, websockets.ConnectionClosedError, websockets.ConnectionClosedOK) as err:
+        print("WebSocket connection closed.")
+        if DEBUG:
+            print(err)
+        await close_engine(games[uid])
+        del games[uid]
+    except Exception as err:
+        print("Something went wrong. Keep trying...")
+        if DEBUG:
+            print(err)
 
 
 async def connection_handler(websocket, path):
@@ -389,12 +400,11 @@ async def connection_handler(websocket, path):
                 print("Something went wrong. Keep trying...")
                 if DEBUG:
                     print(err)
-
         print("Connection closed", path)
-
-    except websockets.ConnectionClosed as err:
+        await close_engine(games[path])
+        del games[path]
+    except (websockets.ConnectionClosed, websockets.ConnectionClosedError, websockets.ConnectionClosedOK) as err:
         print("WebSocket connection closed.")
-        print("Please restart the server.")
         if DEBUG:
             print(err)
         await close_engine(games[path])
