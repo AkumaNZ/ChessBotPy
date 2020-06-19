@@ -39,7 +39,7 @@ Next you'll need to run the python script. You can either run the precompiled ex
 1. Open `cmd` in the folder you extracted the files to
 2. Run chessbotpy.exe
 
-The included engine is a dev build of Stockfish (bmi2) from 6.6.2020, if this does not work for you, keep reading.
+The included engine is a dev build of Stockfish (bmi2) from 19.6.2020, if this does not work for you, keep reading.
 
 ### Running the python script yourself:
 

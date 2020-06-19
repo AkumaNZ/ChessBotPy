@@ -1,3 +1,4 @@
-Get FEN from board state (for chess.com puzzles)
-Continuous analysis
-Translate SAN moves
+- Get FEN from board state (for chess.com puzzles)
+- Continuous analysis
+- Translate SAN moves
+- Get square indices from server side, rather than parsing LAN
