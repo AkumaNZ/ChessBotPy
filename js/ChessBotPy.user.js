@@ -47,7 +47,7 @@ let siteMap = {
 		movesSelector: '.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
 		sanSelector: '.move-text-component, .gotomove, .move-list-controls-move',
 		overlaySelector: '#chessboard_boardarea, .board-layout-chessboard, .board-board',
-		analysisSelector: '.with-analysis',
+		analysisSelector: '.with-analysis, .with-analysis-collapsed',
 		sideFinder: () => (doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE),
 	},
 	'chess24.com': {
@@ -128,32 +128,6 @@ function updateSide() {
 	}
 }
 
-function range(start, end) {
-	return Array(end - start + 1)
-		.fill()
-		.map((_, idx) => start + idx);
-}
-
-function generateGridAreas() {
-	const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-	const ranks = range(1, 8);
-	if (app.playingAs == WHITE) {
-		ranks.reverse();
-	} else {
-		files.reverse();
-	}
-	let gridArea = ``;
-	for (r of ranks) {
-		let gridRow = [];
-		gridArea += '"';
-		for (f of files) {
-			gridRow.push(`${f}${r}`);
-		}
-		gridArea += `${gridRow.join(' ')}" `;
-	}
-	return gridArea;
-}
-
 function parseLAN(LAN, turn) {
 	let moves = LAN.split('-');
 	if (moves.length == 1) {
@@ -181,8 +155,49 @@ function parseLAN(LAN, turn) {
 	return { from: from.slice(-2), to: to.slice(0, 2) };
 }
 
+function range(start, end) {
+	return Array(end - start + 1)
+		.fill()
+		.map((_, idx) => start + idx);
+}
+
+function squareToPos(square, size) {
+	const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+	const ranks = range(1, 8);
+
+	app.playingAs == WHITE ? ranks.reverse() : files.reverse();
+
+	let [file, rank] = square.split('');
+	rank = parseInt(rank);
+
+	const x = files.indexOf(file);
+	const y = ranks.indexOf(rank);
+
+	const squareSize = size / 8;
+
+	return [squareSize * x + squareSize / 2, squareSize * y + squareSize / 2];
+}
+
+function drawPieceOnlyOverlay({ width, height, top, left }) {
+	let span = doc.createElement('span');
+	span.innerText = app.bestPiece;
+	span.id = 'py-overlay';
+	span.style.position = 'absolute';
+	span.style.zIndex = '99999';
+	span.style.pointerEvents = 'none';
+	span.style.top = top + height + 8 + 'px';
+	span.style.left = left + width / 3 + 'px';
+	span.style.width = 200 + 'px';
+	span.style.height = 100 + 'px';
+	span.style.color = 'white';
+	span.style.fontSize = '16px';
+	span.style.textShadow = '0px 0px 5px #000';
+	span.style.marginTop = '4px';
+	doc.body.appendChild(span);
+}
+
 function drawOnScreen() {
-	var existing = doc.getElementById('py-overlay');
+	let existing = doc.getElementById('py-overlay');
 	if (existing) {
 		existing.remove();
 	}
@@ -191,84 +206,90 @@ function drawOnScreen() {
 		return;
 	}
 
-	var boardElement = doc.querySelector(siteMap[host].overlaySelector);
-	var { width, height, top, left } = boardElement.getBoundingClientRect();
-	var overlay = doc.createElement('div');
-	overlay.id = 'py-overlay';
-	overlay.style.display = 'grid';
-	overlay.style.position = 'absolute';
-	overlay.style.zIndex = '99999';
-	overlay.style.pointerEvents = 'none';
+	let boardElement = doc.querySelector(siteMap[host].overlaySelector);
+	let rect = boardElement.getBoundingClientRect();
+	let { width, height, top, left } = rect;
 
 	if (app.pieceOnly) {
-		overlay.style.top = top + height + 8 + 'px';
-		overlay.style.left = left + width / 2 + 'px';
-		overlay.style.width = 200 + 'px';
-		overlay.style.height = 100 + 'px';
-
-		let span = doc.createElement('span');
-		span.innerText = app.bestPiece;
-		span.style.color = 'white';
-		span.style.fontSize = '2rem';
-		span.style.textShadow = '0px 0px 5px #000';
-		span.style.marginTop = '4px';
-		span.style.marginLeft = '4px';
-		overlay.appendChild(span);
-	} else {
-		overlay.style.gridTemplateRows = 'repeat(8, 1fr)';
-		overlay.style.gridTemplateColumns = 'repeat(8, 1fr)';
-		overlay.style.width = width + 'px';
-		overlay.style.height = height + 'px';
-		overlay.style.top = top + 'px';
-		overlay.style.left = left + 'px';
-		overlay.style.width = width + 'px';
-		overlay.style.gridTemplateAreas = generateGridAreas();
-		var turn = +app.turn;
-		var lanMoves = app.pvs.map((x) => x.lan);
-		var lanPV = lanMoves[app.selectedPV - 1];
-
-		// If Im playing as black, and it's my turn, then draw as black
-
-		if (lanPV && lanPV.length > 0) {
-			drawBox(overlay, lanPV[0], turn, width);
-		}
-
-		if (lanPV && lanPV.length > 1) {
-			drawBox(overlay, lanPV[1], (turn + 1) % 2, width);
-		}
+		drawPieceOnlyOverlay(rect);
+		return;
 	}
-	doc.body.appendChild(overlay);
+
+	let svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	svg.id = 'py-overlay';
+	svg.style.position = 'absolute';
+	svg.style.zIndex = '99999';
+	svg.style.pointerEvents = 'none';
+	svg.style.width = width + 'px';
+	svg.style.height = height + 'px';
+	svg.style.top = top + 'px';
+	svg.style.left = left + 'px';
+	svg.setAttribute('width', width);
+	svg.setAttribute('height', width);
+
+	let turn = +app.turn;
+	let lanMoves = app.pvs.map((x) => x.lan);
+	let lanPV = lanMoves[app.selectedPV - 1];
+
+	if (lanPV && lanPV.length > 0) {
+		drawArrow(svg, lanPV[0], turn, width);
+	}
+
+	if (lanPV && lanPV.length > 1) {
+		drawArrow(svg, lanPV[1], (turn + 1) % 2, width);
+	}
+
+	doc.body.appendChild(svg);
 }
 
-function createArrow(from, to, color, size) {
-	var svg = document.createElement('svg');
-	// <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 40 400 200">
-	// 	<marker id="triangle" viewBox="0 0 10 10" refX="0" refY="5" markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
-	// 		<path d="M 0 0 L 10 5 L 0 10 z"/>
-	// 	</marker>
-	// 	<line x1="100" y1="50.5" x2="300" y2="50.5" marker-end="url(#triangle)" stroke="black" stroke-width="10"/>
-	// </svg>
-}
-
-function drawBox(overlay, move, turn, size) {
+function drawArrow(svg, move, turn, size) {
 	colors = {
-		0: ['hsla(350, 100%, 50%, 0.66)', 'hsla(340, 100%, 50%, 0.66)'], // BLACK
-		1: ['hsla(145, 100%, 50%, 0.66)', 'hsla(155, 100%, 50%, 0.66)'], // WHITE
+		0: 'hsla(350, 100%, 50%, 0.66)', // BLACK
+		1: 'hsla(145, 100%, 50%, 0.66)', // WHITE
 	};
-	var { from, to } = parseLAN(move, turn);
-	overlay.appendChild(createBox(from, colors[turn][0], size));
-	overlay.appendChild(createBox(to, colors[turn][1], size));
-}
 
-function createBox(square, color, size) {
-	var box = document.createElement('div');
-	box.style.width = size / 8 + 'px';
-	box.style.height = size / 8 + 'px';
-	box.style.border = `4px solid ${color}`;
-	box.style.pointerEvents = 'none';
-	box.style.gridArea = square;
-	box.style.boxSizing = 'border-box';
-	return box;
+	const squareSize = size / 8;
+
+	let marker = doc.createElementNS('http://www.w3.org/2000/svg', 'marker');
+	marker.id = 'triangle' + turn;
+	marker.setAttribute('viewBox', '0 0 20 20');
+	marker.setAttribute('refX', '0');
+	marker.setAttribute('refY', '5');
+	marker.setAttribute('markerUnits', 'strokeWidth');
+	marker.setAttribute('markerWidth', squareSize / 12);
+	marker.setAttribute('markerHeight', squareSize / 12);
+	marker.setAttribute('orient', 'auto');
+	marker.setAttribute('fill', colors[turn]);
+
+	let path = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
+	path.setAttribute('d', 'M 0 0 L 7.5 5 L 0 10 z');
+	marker.appendChild(path);
+
+	svg.appendChild(marker);
+
+	let { from, to } = parseLAN(move, turn);
+	[x1, y1] = squareToPos(from, size);
+	[x2, y2] = squareToPos(to, size);
+
+	const xDist = x2 - x1;
+	const yDist = y2 - y1;
+	const dist = Math.sqrt(xDist * xDist + yDist * yDist);
+	const newDist = dist - squareSize * (2 / 5);
+	const scale = newDist / dist;
+
+	x2 = x1 + xDist * scale;
+	y2 = y1 + yDist * scale;
+
+	let line = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
+	line.setAttribute('x1', x1);
+	line.setAttribute('y1', y1);
+	line.setAttribute('x2', x2);
+	line.setAttribute('y2', y2);
+	line.setAttribute('marker-end', `url(#triangle${turn})`);
+	line.setAttribute('stroke', colors[turn]);
+	line.setAttribute('stroke-width', squareSize / 6);
+	// line.setAttribute('stroke-linecap', 'round');
+	svg.appendChild(line);
 }
 
 const findGame = async () => {

@@ -44,19 +44,19 @@ class GameObject:
         return True
 
 
-def read_book(book, opening_moves, game, line, response):
+def read_book(book, opening_moves, board, line, response):
     eol = True
     with chess.polyglot.open_reader(book) as reader:
-        for entry in reader.find_all(game.board, minimum_weight=0):
+        for entry in reader.find_all(board, minimum_weight=0):
             eol = False
             new_line = line.copy()
             new_line.append(entry)
             if response:
                 opening_moves.append(new_line)
             else:
-                game.board.push(entry.move)
-                read_book(book, opening_moves, game, new_line, True)
-                game.board.pop()
+                board.push(entry.move)
+                read_book(book, opening_moves, board, new_line, True)
+                board.pop()
     if eol and len(line) > 0:
         opening_moves.append(line)
 
@@ -72,6 +72,7 @@ async def close_engine(game):
                 print(err)
         game.engine = None
         game.transport = None
+        game.analysis = False
 
 
 async def configure_engine(engine):
@@ -82,8 +83,7 @@ async def configure_engine(engine):
                 await engine.configure({key: value})
 
 
-async def run_engine(uid, ws, task):
-    game: GameObject = games[uid]
+async def start_engine(game, ws):
     if game.engine is None:
         try:
             engine_path = settings.config.get("gui", "engine_path")
@@ -92,12 +92,17 @@ async def run_engine(uid, ws, task):
             await ws.send(serialize_message("error", "Engine path: " + err.strerror))
         await configure_engine(game.engine)
 
+
+async def run_engine(uid, ws):
+    game: GameObject = games[uid]
+    board = game.board.copy()
+    await start_engine(game, ws)
     if not game.should_run():
         return
 
     # Reset old arrows when engine is about to run
     game.arrows.clear()
-    # print(game.board)
+    # print(board)
     limit: chess.engine.Limit = chess.engine.Limit()
     use_depth = settings.config.getboolean("gui", "use_depth")
     use_time = settings.config.getboolean("gui", "use_time")
@@ -118,7 +123,7 @@ async def run_engine(uid, ws, task):
             pass
 
     # Set latest ECO for current board
-    eco_name = eco.get_name(game.board.epd())
+    eco_name = eco.get_name(board.epd())
     if eco_name != "":
         game.eco = eco_name
 
@@ -127,13 +132,13 @@ async def run_engine(uid, ws, task):
     if settings.config.getboolean("gui", "use_book"):
         bookfiles = books.load_books("books")
         for bookfile in bookfiles:
-            read_book(bookfile, opening_moves, game, [], 0)
+            read_book(bookfile, opening_moves, board, [], 0)
 
     if len(opening_moves) > 0:
         opening_moves = sorted(opening_moves, key=lambda x: sum([y.weight for y in x]), reverse=True)
 
-        best_move = game.board.san(opening_moves[0][0].move)
-        best_piece = chess.piece_name(game.board.piece_at(opening_moves[0][0].move.from_square).piece_type).capitalize()
+        best_move = board.san(opening_moves[0][0].move)
+        best_piece = chess.piece_name(board.piece_at(opening_moves[0][0].move.from_square).piece_type).capitalize()
 
         opening_dict = defaultdict(list)
 
@@ -170,21 +175,21 @@ async def run_engine(uid, ws, task):
             score = move.weight
             pv = []
             lan = []
-            pv.append(game.board.san(move.move))
-            lan.append(game.board.lan(move.move))
-            arrow = drawing.get_arrow(move.move, game.board.turn, 0)
+            pv.append(board.san(move.move))
+            lan.append(board.lan(move.move))
+            arrow = drawing.get_arrow(move.move, board.turn, 0)
             game.arrows[list_index].append(arrow)
-            game.board.push(move.move)
+            board.push(move.move)
             # Get EPD after the first push is moved
-            epd = game.board.epd()
-            opponents_turn = game.board.turn
+            epd = board.epd()
+            opponents_turn = board.turn
             for reply in replies:
-                pv.append(game.board.san(reply.move))
-                lan.append(game.board.lan(reply.move))
+                pv.append(board.san(reply.move))
+                lan.append(board.lan(reply.move))
                 arrow = drawing.get_arrow(reply.move, opponents_turn, 1)
                 game.arrows[list_index].append(arrow)
             # Unwind the move stack
-            game.board.pop()
+            board.pop()
             line = {
                 "multipv": list_index,
                 "score": score,
@@ -196,7 +201,7 @@ async def run_engine(uid, ws, task):
             multi_pv.append(line)
         await ws.send(
             serialize_message(
-                "multipv", {"multipv": multi_pv, "turn": game.board.turn, "current_eco": game.eco, "book": True, "best_piece": best_piece}
+                "multipv", {"multipv": multi_pv, "turn": board.turn, "current_eco": game.eco, "book": True, "best_piece": best_piece}
             )
         )
     else:
@@ -209,19 +214,22 @@ async def run_engine(uid, ws, task):
         multi_pv = settings.config.getint("gui", "multipv")
         print("Starting analysis with limit", limit, "for", multi_pv, "pv(s)")
         try:
-            await cancel_tasks(task)
-            tasks[task]["cancelable"] = True
-            results = await game.engine.analyse(board=game.board, limit=limit, multipv=multi_pv, game=uid, info=chess.engine.INFO_ALL,)
+            game.analysing = True
+            results = await game.engine.analyse(board=board, limit=limit, multipv=multi_pv, game=uid, info=chess.engine.INFO_ALL)
         except Exception as err:
             print("Engine analysis failed.")
             if DEBUG:
                 print(err)
             return
         finally:
-            tasks[task]["cancelable"] = False
+            game.analysing = False
 
-        best_move = game.board.san(results[0].pv[0])
-        best_piece = chess.piece_name(game.board.piece_at(results[0].pv[0].from_square).piece_type).capitalize()
+        if results is None or results[0] is None:
+            print("Analysis stopped before results, returning...")
+            return
+
+        best_move = board.san(results[0].pv[0])
+        best_piece = chess.piece_name(board.piece_at(results[0].pv[0].from_square).piece_type).capitalize()
 
         multipv_data = []
         for multi_pv in results:
@@ -231,24 +239,24 @@ async def run_engine(uid, ws, task):
             epd = ""
 
             for index, move in enumerate(multi_pv.pv):
-                san = game.board.san(move)
-                lan = game.board.lan(move)
-                arrow = drawing.get_arrow(move, game.board.turn, move_counter // 2)
+                san = board.san(move)
+                lan = board.lan(move)
+                arrow = drawing.get_arrow(move, board.turn, move_counter // 2)
                 pv_index = 1 if multi_pv.multipv is None else multi_pv.multipv
                 game.arrows[pv_index].append(arrow)
 
                 pv.append(san)
                 lan_pv.append(lan)
-                game.board.push(move)
+                board.push(move)
 
                 # Get EPD for the first move
                 if index == 0:
-                    epd = game.board.epd()
+                    epd = board.epd()
 
                 move_counter += 1
 
             for _ in range(move_counter):
-                game.board.pop()
+                board.pop()
 
             if multi_pv.score.is_mate():
                 score = "#" + str(multi_pv.score.relative.moves)
@@ -265,8 +273,7 @@ async def run_engine(uid, ws, task):
             multipv_data.append(unit)
         await ws.send(
             serialize_message(
-                "multipv",
-                {"multipv": multipv_data, "turn": game.board.turn, "current_eco": game.eco, "book": False, "best_piece": best_piece},
+                "multipv", {"multipv": multipv_data, "turn": board.turn, "current_eco": game.eco, "book": False, "best_piece": best_piece},
             )
         )
 
@@ -284,7 +291,7 @@ async def run_engine(uid, ws, task):
     game.missed_moves = False
 
 
-async def update_board(game, data, uid, ws, fen, task):
+async def update_board(game, data, uid, ws, fen):
     game.board.reset()
     if fen:
         game.board.set_fen(data)
@@ -294,11 +301,22 @@ async def update_board(game, data, uid, ws, fen, task):
                 game.board.push_san(move)
             except ValueError as err:
                 print(err)
+    await run_engine(uid, ws)
 
-    await run_engine(uid, ws, task)
+
+async def initialize_engine_settings(ws):
+    engine_path = settings.config.get("gui", "engine_path")
+    if os.path.exists(engine_path):
+        dummy = chess.engine.SimpleEngine.popen_uci(engine_path)
+        settings.initialize_engine_settings_file(dummy)
+        await settings.send_engine_settings(ws, dummy)
+        dummy.quit()
+    else:
+        print("Invalid engine path.")
+        await ws.send(serialize_message("error", "Invalid engine path."))
 
 
-async def handle_message(message, uid, ws, task):
+async def handle_message(message, uid, ws):
     # Initialize game object with a new board
     if uid not in games:
         games[uid] = GameObject(chess.Board())
@@ -319,32 +337,24 @@ async def handle_message(message, uid, ws, task):
             # Re-initialize engine settings file, and send engine settings to client if engine path was changed.
             await close_engine(game)
             try:
-                engine_path = settings.config.get("gui", "engine_path")
-                if os.path.exists(engine_path):
-                    dummy = chess.engine.SimpleEngine.popen_uci(engine_path)
-                    settings.initialize_engine_settings_file(dummy)
-                    await settings.send_engine_settings(ws, dummy)
-                    dummy.quit()
-                else:
-                    print("Invalid engine path.")
-                    await ws.send(serialize_message("error", "Invalid engine path."))
+                await initialize_engine_settings(ws)
             except Exception as err:
                 print("Initializing engine failed.")
                 if DEBUG:
                     print(err)
 
         if rerun_engine == RERUN:
-            await run_engine(uid, ws, task)
+            await run_engine(uid, ws)
 
     elif data["type"] == "engine_setting":
         await settings.update_engine_settings(data["data"])
-        await run_engine(uid, ws, task)
+        await run_engine(uid, ws)
 
     elif data["type"] == "moves":
-        await update_board(game, data["data"], uid, ws, False, task)
+        await update_board(game, data["data"], uid, ws, False)
 
     elif data["type"] == "fen":
-        await update_board(game, data["data"], uid, ws, True, task)
+        await update_board(game, data["data"], uid, ws, True)
 
     elif data["type"] == "clear_hash":
         if game.engine is not None:
@@ -363,47 +373,18 @@ async def handle_message(message, uid, ws, task):
         print("Unknown message", data)
 
 
-async def cancel_tasks(current_task):
-    done = []
-    for task_index, task in tasks.items():
-        if task["task"].done():
-            done.append(task_index)
-        if task != current_task and task["cancelable"]:
-            task["task"].cancel()
-            try:
-                await task["task"]
-            except asyncio.CancelledError:
-                done.append(task_index)
-                print(f"Task {current_task} is now cancelled.")
-
-    for t in done:
-        del tasks[t]
-
-
 async def connection_handler(websocket, path):
-    global tasks
-    global task_counter
     try:
         print("Client connected", path)
         # Send default settings values to client
         await settings.send_settings(websocket)
 
         # Send engine settings to client
-        engine_path = settings.config.get("gui", "engine_path")
-        if os.path.exists(engine_path):
-            dummy = chess.engine.SimpleEngine.popen_uci(engine_path)
-            settings.initialize_engine_settings_file(dummy)
-            await settings.send_engine_settings(websocket, dummy)
-            dummy.quit()
-        else:
-            print("Engine path is not defined.")
-            await websocket.send(serialize_message("error", "Engine path is not defined"))
+        await initialize_engine_settings(websocket)
 
         async for message in websocket:
             try:
-                task_counter += 1
-                task = asyncio.create_task(handle_message(message, path, websocket, task_counter), name=task_counter)
-                tasks[task_counter] = {"task": task, "cancelable": False}
+                asyncio.create_task(handle_message(message, path, websocket))
             except Exception as err:
                 print("Something went wrong. Keep trying...")
                 if DEBUG:
@@ -423,8 +404,6 @@ async def connection_handler(websocket, path):
 if __name__ == "__main__":
     # Global state
     games = {}
-    tasks = {}
-    task_counter = 0
 
     try:
         eco.load_eco("eco")
