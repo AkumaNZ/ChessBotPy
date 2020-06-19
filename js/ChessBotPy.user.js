@@ -68,7 +68,7 @@ let siteMap = {
 };
 
 cleanse = (x) => {
-	chars = ['↵', '✓'];
+	chars = ['↵', '✓', '1-0', '0-1', '1/2-1/2'];
 	for (let c of chars) {
 		x = x.replace(c, '');
 	}
