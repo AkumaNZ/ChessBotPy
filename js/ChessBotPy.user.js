@@ -7,7 +7,7 @@
 // @match       *://gameknot.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     9.0
+// @version     9.1
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -347,13 +347,15 @@ const connect = (url) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const waitForElement = async (selector, timeout) => {
+const waitForElement = async (selector, timeout, opener = true) => {
 	let now = Date.now();
 	const end = now + timeout * 1000;
 	while (end > now) {
 		now = Date.now();
-		const element = doc.querySelector(selector);
+		let queryDocument = opener ? doc : document;
+		let element = queryDocument.querySelector(selector);
 		if (element != null) {
+			console.log('Found element.');
 			return element;
 		}
 		await sleep(100);
@@ -383,7 +385,7 @@ const main = async () => {
 			return;
 		}
 
-		let hasAnalysis = (await waitForElement(siteMap[host].analysisSelector, 1)) != null;
+		let hasAnalysis = (await waitForElement(siteMap[host].analysisSelector, 1, false)) != null;
 		if (hasAnalysis) {
 			return;
 		}
