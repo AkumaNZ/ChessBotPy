@@ -7,7 +7,7 @@
 // @match       *://gameknot.com/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     8.0
+// @version     9.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
