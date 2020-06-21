@@ -347,13 +347,12 @@ const connect = (url) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const waitForElement = async (selector, timeout, opener = true) => {
+const waitForElement = async (selector, timeout) => {
 	let now = Date.now();
 	const end = now + timeout * 1000;
 	while (end > now) {
 		now = Date.now();
-		let queryDocument = opener ? doc : document;
-		let element = queryDocument.querySelector(selector);
+		let element = document.querySelector(selector);
 		if (element != null) {
 			console.log('Found element.');
 			return element;
@@ -385,7 +384,7 @@ const main = async () => {
 			return;
 		}
 
-		let hasAnalysis = (await waitForElement(siteMap[host].analysisSelector, 1, false)) != null;
+		let hasAnalysis = (await waitForElement(siteMap[host].analysisSelector, 1)) != null;
 		if (hasAnalysis) {
 			return;
 		}
