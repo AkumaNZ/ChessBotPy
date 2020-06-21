@@ -372,12 +372,11 @@ async def handle_message(message, uid, ws):
 
         else:
             print("Unknown message", data)
-    except (websockets.ConnectionClosed, websockets.ConnectionClosedError, websockets.ConnectionClosedOK) as err:
-        print("WebSocket connection closed.")
+    except websockets.ConnectionClosed as err:
+        print("WebSocket connection closed inside message handler.")
         if DEBUG:
             print(err)
-        await close_engine(games[uid])
-        del games[uid]
+        await cleanup(uid)
     except Exception as err:
         print("Something went wrong. Keep trying...")
         if DEBUG:
@@ -394,21 +393,21 @@ async def connection_handler(websocket, path):
         await initialize_engine_settings(websocket)
 
         async for message in websocket:
-            try:
-                asyncio.create_task(handle_message(message, path, websocket))
-            except Exception as err:
-                print("Something went wrong. Keep trying...")
-                if DEBUG:
-                    print(err)
+            asyncio.create_task(handle_message(message, path, websocket))
+
         print("Connection closed", path)
-        await close_engine(games[path])
-        del games[path]
-    except (websockets.ConnectionClosed, websockets.ConnectionClosedError, websockets.ConnectionClosedOK) as err:
-        print("WebSocket connection closed.")
+        await cleanup(path)
+    except websockets.ConnectionClosed as err:
+        print("WebSocket connection closed in exception.")
         if DEBUG:
             print(err)
-        await close_engine(games[path])
-        del games[path]
+        await cleanup(path)
+
+
+async def cleanup(uid):
+    await close_engine(games[uid])
+    if uid in games:
+        del games[uid]
 
 
 if __name__ == "__main__":
