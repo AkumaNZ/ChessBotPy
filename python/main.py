@@ -405,8 +405,8 @@ async def connection_handler(websocket, path):
 
 
 async def cleanup(uid):
-    await close_engine(games[uid])
     if uid in games:
+        await close_engine(games[uid])
         del games[uid]
 
 
