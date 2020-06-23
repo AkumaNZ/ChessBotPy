@@ -5,9 +5,10 @@
 // @match       *://www.chess.com/*
 // @match       *://chess24.com/*
 // @match       *://gameknot.com/*
+// @match       *://arena.myfide.net/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     10.0
+// @version     11.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -65,14 +66,13 @@ let siteMap = {
 		sideFinder: () =>
 			doc.querySelector('#chess-board-my-side-color .player_white, #game-board-my-side-color .player_white') != null ? WHITE : BLACK,
 	},
-};
-
-cleanse = (x) => {
-	chars = ['↵', '✓', '1-0', '0-1', '1/2-1/2'];
-	for (let c of chars) {
-		x = x.replace(c, '');
-	}
-	return x.trim();
+	'arena.myfide.net': {
+		movesSelector: '.notifications__table',
+		sanSelector: '.notifications__move',
+		overlaySelector: '.cg-board',
+		analysisSelector: '.analyse__tools',
+		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK),
+	},
 };
 
 function uuidv4() {
@@ -325,6 +325,10 @@ const findGame = async () => {
 		// Get moves through SAN
 		let moves = [...doc.querySelectorAll(siteMap[host].sanSelector)].map((x) => cleanse(x.innerText)).filter((x) => x != '');
 
+		if (host == 'arena.myfide.net') {
+			moves = [...doc.querySelectorAll(siteMap[host].sanSelector)].map((x) => cleanse(parseFideSAN(x))).filter((x) => x != '');
+		}
+
 		// Number of moves changed, update all the things!
 		if (moves.length != numOfMoves) {
 			if (moves.length < 2) {
@@ -335,6 +339,28 @@ const findGame = async () => {
 			ws.send(JSON.stringify({ type: 'moves', data: moves }));
 		}
 	}
+};
+
+const cleanse = (x) => {
+	chars = ['↵', '✓', '1-0', '0-1', '1/2-1/2', '\n'];
+	for (let c of chars) {
+		x = x.replace(c, '');
+	}
+	return x.trim();
+};
+
+const parseFideSAN = (x) => {
+	let innerText = x.innerText;
+	if (innerText.includes('0-0')) {
+		innerText = innerText.replace(/0/g, 'O');
+	}
+	const img = x.querySelector('img');
+	if (img == null) {
+		return innerText;
+	}
+	const src = img.src.split('/');
+	const piece = src[src.length - 1].replace('.svg', '').split('')[1];
+	return piece == 'P' ? innerText : piece + innerText;
 };
 
 const connect = (url) => {
