@@ -4,6 +4,7 @@ from collections import defaultdict
 import websockets
 import chess
 import chess.engine
+import chess.variant
 import json
 import chess.polyglot
 
@@ -137,8 +138,9 @@ async def run_engine(uid, ws):
     if len(opening_moves) > 0:
         opening_moves = sorted(opening_moves, key=lambda x: sum([y.weight for y in x]), reverse=True)
 
-        best_move = board.san(opening_moves[0][0].move)
+        best_san = board.san(opening_moves[0][0].move)
         best_piece = chess.piece_name(board.piece_at(opening_moves[0][0].move.from_square).piece_type).capitalize()
+        mate_in = None
 
         opening_dict = defaultdict(list)
 
@@ -228,8 +230,10 @@ async def run_engine(uid, ws):
             print("Analysis stopped before results, returning...")
             return
 
-        best_move = board.san(results[0].pv[0])
-        best_piece = chess.piece_name(board.piece_at(results[0].pv[0].from_square).piece_type).capitalize()
+        best_move = results[0].pv[0]
+        best_san = board.san(best_move)
+        best_piece = chess.piece_name(board.piece_at(best_move.from_square).piece_type).capitalize()
+        mate_in = multi_pv.score.relative.moves if results[0].score.is_mate() else None
 
         multipv_data = []
         for multi_pv in results:
@@ -277,7 +281,10 @@ async def run_engine(uid, ws):
             )
         )
 
-    print("Best move:", best_piece if settings.config.getboolean("gui", "piece_only") else best_move)
+    if DEBUG:
+        print("Best move:", best_piece if settings.config.getboolean("gui", "piece_only") else best_san)
+        if mate_in is not None:
+            print("Mate in", mate_in)
 
     if settings.config.getboolean("gui", "draw_board"):
         svg = drawing.draw_svg_board(game, 1)
@@ -287,7 +294,7 @@ async def run_engine(uid, ws):
         if settings.config.getboolean("gui", "piece_only"):
             voice.say(best_piece, True)
         else:
-            voice.say(best_move, False)
+            voice.say(best_san, False)
     game.missed_moves = False
 
 
