@@ -20,8 +20,8 @@ DEBUG = True
 
 
 class GameObject:
-    def __init__(self, board):
-        self.board: chess.Board = board
+    def __init__(self):
+        self.board: chess.Board = chess.Board()
         self.engine: chess.engine.EngineProtocol = None
         self.transport: asyncio.transports.SubprocessTransport = None
         self.missed_moves = False
@@ -30,6 +30,7 @@ class GameObject:
         self.arrows = defaultdict(list)
         self.analysing = False
         self.eco = ""
+        self.variant = "Board"
 
     def should_run(self):
         run_for = settings.config.getint("gui", "run")
@@ -43,6 +44,13 @@ class GameObject:
         if (run_for == ME and side != turn) or (run_for == OPPONENT and side == turn):
             return False
         return True
+
+    def set_variant(self, variant):
+        self.variant = variant
+        if variant == "Board":
+            self.board = chess.Board()
+        else:
+            self.board = chess.variant[variant]()  # Use getattr if this doesn't work
 
 
 def read_book(book, opening_moves, board, line, response):
@@ -327,7 +335,7 @@ async def handle_message(message, uid, ws):
     try:
         # Initialize game object with a new board
         if uid not in games:
-            games[uid] = GameObject(chess.Board())
+            games[uid] = GameObject()
 
         # Shorthand for the game
         game = games[uid]

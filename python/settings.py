@@ -85,6 +85,9 @@ async def update_settings(data, game, ws, uid):
             if (run_for == ME and side == turn) or (run_for == OPPONENT and side != turn):
                 return RERUN
             return NOOP
+        elif key == "variant":
+            game.set_variant(value)
+            return NOOP
 
     if config.has_option("gui", key):
         # Set gui settings and save to file

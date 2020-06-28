@@ -40,6 +40,10 @@ def parse_speech(move: str):
             castles_count += 1
         elif letter == "=":
             sentence += "promotes to "
+        elif letter == "@":  # Crazyhouse variant
+            if move[0] == "@":
+                sentence += "Pawn "
+            sentence += "dropped on "
         elif letter.isdigit():
             sentence += digits[letter]
         else:
