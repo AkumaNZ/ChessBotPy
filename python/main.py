@@ -233,7 +233,7 @@ async def run_engine(uid, ws):
         best_move = results[0].pv[0]
         best_san = board.san(best_move)
         best_piece = chess.piece_name(board.piece_at(best_move.from_square).piece_type).capitalize()
-        mate_in = multi_pv.score.relative.moves if results[0].score.is_mate() else None
+        mate_in = results[0].score.relative.moves if results[0].score.is_mate() else None
 
         multipv_data = []
         for multi_pv in results:
