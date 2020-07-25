@@ -45,8 +45,8 @@ let siteMap = {
 		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK),
 	},
 	'www.chess.com': {
-		movesSelector: '.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component',
-		sanSelector: '.move-text-component, .gotomove, .move-list-controls-move',
+		movesSelector: '.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component, .move-list-component',
+		sanSelector: '.move-text-component, .gotomove, .move-list-controls-move, .move-component, .move-text',
 		overlaySelector: '#chessboard_boardarea, .board-layout-chessboard, .board-board',
 		analysisSelector: '.with-analysis, .with-analysis-collapsed',
 		sideFinder: () => (doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE),
