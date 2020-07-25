@@ -7,6 +7,7 @@
 // @match       *://gameknot.com/*
 // @match       *://arena.myfide.net/*
 // @grant       none
+// @inject-into content
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
 // @version     12.0
 // @author      FallDownTheSystem
