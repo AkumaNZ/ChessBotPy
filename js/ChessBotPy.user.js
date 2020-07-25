@@ -331,7 +331,7 @@ const findGame = async () => {
 
 		// Number of moves changed, update all the things!
 		if (moves.length != numOfMoves) {
-			if (moves.length < 2) {
+			if (moves.length < 2 || (host == "lichess.org" && doc.location.pathname.startsWith("/training"))) {
 				updateSide();
 			}
 			numOfMoves = moves.length;
