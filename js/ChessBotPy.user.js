@@ -650,6 +650,17 @@ const main = async () => {
 								type="range" min="0.01" max="30" step="0.01" v-model.number="time" @change="handleSettingChange($event, 'time', 'float')"
 								class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
 							>
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
+									type="checkbox" v-model="useNodes" @change="handleSettingChange($event, 'use_nodes', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2">Nodes {{ nodes }}</span>
+							</label>
+							<input
+								type="range" min="1" max="100000000" step="1" v-model.number="nodes" @change="handleSettingChange($event, 'nodes', 'int')"
+								class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
+							>
 						</div>
 
 						<div class="flex flex-col mr-10 mb-4">
@@ -878,6 +889,8 @@ const main = async () => {
 			depth: 8,
 			useTime: true,
 			time: 1.0,
+			useNodes: false,
+			nodes: 100,
 			engineSettings: [],
 			drawBoard: true,
 			useVoice: true,
