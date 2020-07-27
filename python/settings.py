@@ -18,6 +18,8 @@ def initialize_settings_file():
         "depth": 8,
         "use_time": True,
         "time": 2.0,
+        "use_nodes": False,
+        "nodes": 100,
         "draw_board": True,
         "multipv": 2,
         "clear_log": True,
@@ -156,6 +158,8 @@ def get_mapped_settings():
     yield {"key": "multipv", "value": config.getint("gui", "multipv")}
     yield {"key": "useTime", "value": config.getboolean("gui", "use_time")}
     yield {"key": "time", "value": config.getfloat("gui", "time")}
+    yield {"key": "useNodes", "value": config.getboolean("gui", "use_nodes")}
+    yield {"key": "nodes", "value": config.getint("gui", "nodes")}
     yield {"key": "logEngine", "value": config.getboolean("gui", "clear_log")}
     yield {"key": "useBook", "value": config.getboolean("gui", "use_book")}
     yield {"key": "drawOverlay", "value": config.getboolean("gui", "draw_overlay")}
