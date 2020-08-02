@@ -107,12 +107,15 @@ async def run_engine(uid, ws):
     limit: chess.engine.Limit = chess.engine.Limit()
     use_depth = settings.config.getboolean("gui", "use_depth")
     use_time = settings.config.getboolean("gui", "use_time")
+    use_nodes = settings.config.getboolean("gui", "use_nodes")
     if use_depth:
         limit.depth = settings.config.getint("gui", "depth")
     if use_time:
         limit.time = settings.config.getfloat("gui", "time")
+    if use_nodes:
+        limit.nodes = settings.config.getint("gui", "nodes")
 
-    if not use_depth and not use_time:
+    if not use_depth and not use_time and not use_nodes:
         limit.depth = 8
         await ws.send(serialize_message("error", "No limit set, using default depth of 8"))
 
