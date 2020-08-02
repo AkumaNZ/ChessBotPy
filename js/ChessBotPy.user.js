@@ -659,7 +659,7 @@ const main = async () => {
 								<span class="ml-2">Nodes {{ nodes }}</span>
 							</label>
 							<input
-								type="number" min="1" max="100000000" v-model.number="nodes" @change="handleSettingChange($event, 'nodes', 'int')"
+								type="number" min="1" step="1" v-model.number="nodes" @change="handleSettingChange($event, 'nodes', 'int')"
 								class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 							>
 						</div>
