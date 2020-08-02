@@ -8,7 +8,7 @@
 // @match       *://arena.myfide.net/*
 // @grant       none
 // @require     https://cdn.jsdelivr.net/npm/vue@2.6.11
-// @version     11.0
+// @version     12.0
 // @author      FallDownTheSystem
 // @description ChessBotPy Client
 // ==/UserScript==
@@ -42,21 +42,22 @@ let siteMap = {
 		sanSelector: 'm2, move',
 		overlaySelector: '.cg-wrap',
 		analysisSelector: '.analyse__tools',
-		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK),
+		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK)
 	},
 	'www.chess.com': {
-		movesSelector: '.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component, .move-list-component',
+		movesSelector:
+			'.vertical-move-list-component, .horizontal-move-list-component, .computer-move-list, .move-list-controls-component, .move-list-component',
 		sanSelector: '.move-text-component, .gotomove, .move-list-controls-move, .move-component, .move-text',
 		overlaySelector: '#chessboard_boardarea, .board-layout-chessboard, .board-board',
 		analysisSelector: '.with-analysis, .with-analysis-collapsed',
-		sideFinder: () => (doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE),
+		sideFinder: () => (doc.querySelector('.board-player-default-bottom.board-player-default-black') != null ? BLACK : WHITE)
 	},
 	'chess24.com': {
 		movesSelector: '.Moves',
 		sanSelector: '.move',
 		overlaySelector: '.chess-board > .svg',
 		analysisSelector: '.with-analysis',
-		sideFinder: () => (doc.querySelector('.bottom .playerInfo.black') != null ? BLACK : WHITE),
+		sideFinder: () => (doc.querySelector('.bottom .playerInfo.black') != null ? BLACK : WHITE)
 	},
 	'gameknot.com': {
 		movesSelector: '#chess-board-moves, #game-board-moves',
@@ -64,15 +65,15 @@ let siteMap = {
 		overlaySelector: '#chess-board-acboard, #game-board-acboard',
 		analysisSelector: '.with-analysis',
 		sideFinder: () =>
-			doc.querySelector('#chess-board-my-side-color .player_white, #game-board-my-side-color .player_white') != null ? WHITE : BLACK,
+			doc.querySelector('#chess-board-my-side-color .player_white, #game-board-my-side-color .player_white') != null ? WHITE : BLACK
 	},
 	'arena.myfide.net': {
 		movesSelector: '.notifications__table',
 		sanSelector: '.notifications__move',
 		overlaySelector: '.cg-board',
 		analysisSelector: '.analyse__tools',
-		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK),
-	},
+		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK)
+	}
 };
 
 function uuidv4() {
@@ -245,7 +246,7 @@ function drawOnScreen() {
 function drawArrow(svg, move, turn, size) {
 	colors = {
 		0: 'hsla(350, 100%, 50%, 0.66)', // BLACK
-		1: 'hsla(145, 100%, 50%, 0.66)', // WHITE
+		1: 'hsla(145, 100%, 50%, 0.66)' // WHITE
 	};
 
 	const squareSize = size / 8;
@@ -331,7 +332,7 @@ const findGame = async () => {
 
 		// Number of moves changed, update all the things!
 		if (moves.length != numOfMoves) {
-			if (moves.length < 2 || (host == "lichess.org" && doc.location.pathname.startsWith("/training"))) {
+			if (moves.length < 2 || (host == 'lichess.org' && doc.location.pathname.startsWith('/training'))) {
 				updateSide();
 			}
 			numOfMoves = moves.length;
@@ -658,8 +659,8 @@ const main = async () => {
 								<span class="ml-2">Nodes {{ nodes }}</span>
 							</label>
 							<input
-								type="range" min="1" max="100000000" step="1" v-model.number="nodes" @change="handleSettingChange($event, 'nodes', 'int')"
-								class="slider appearance-none bg-gray-900 outline-none h-3 rounded-full mt-2 mb-4"
+								type="number" min="1" max="100000000" v-model.number="nodes" @change="handleSettingChange($event, 'nodes', 'int')"
+								class="bg-gray-900 w-64 h-10 appearance-none border-2 border-gray-900 rounded py-2 px-4 text-gray-400 focus:outline-none focus:border-indigo-500"
 							>
 						</div>
 
@@ -908,7 +909,7 @@ const main = async () => {
 			analysis: false,
 			book: false,
 			pieceOnly: false,
-			bestPiece: '',
+			bestPiece: ''
 		},
 		computed: {
 			currentScore() {
@@ -926,7 +927,7 @@ const main = async () => {
 			},
 			evalBarHeight() {
 				return 100 - (2 / (1 + Math.exp(-0.004 * this.currentScore)) - 1 + 1) * 50;
-			},
+			}
 		},
 		methods: {
 			handleSettingChange(event, key, type) {
@@ -958,8 +959,8 @@ const main = async () => {
 				this.selectedPV = pv;
 				drawOnScreen();
 				ws.send(JSON.stringify({ type: 'draw_svg', data: pv }));
-			},
-		},
+			}
+		}
 	});
 
 	try {
