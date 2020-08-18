@@ -226,3 +226,6 @@ To see more detailed logging, you can set the global variable `DEBUG` to `True` 
 
 **The overlay is not drawing on the correct squares**  
 Check the side, sometimes the side (black or white) finder can fail and thinks you're the playing the wrong color, causing the overlay to be rotated. Just set the side manually to fix it. `ALT + Q` for black and `ALT + W` for white (make sure the tab with the actual game is active).
+
+**After a few moves, the bot stops working / Invalid SAN**  
+The bot only supports SAN in English and only using text notation. Make sure you do not have Figurines enabled in the settings of the chess site you're using.
