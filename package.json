@@ -14,11 +14,11 @@
 	"license": "ISC",
 	"dependencies": {
 		"@fullhuman/postcss-purgecss": "^1.3.0",
-		"autoprefixer": "^9.8.0",
+		"autoprefixer": "^9.8.6",
 		"cssnano": "^4.1.10",
 		"http-server": "^0.12.3",
 		"postcss": "^7.0.32",
-		"tailwindcss": "^1.4.6",
+		"tailwindcss": "^1.7.0",
 		"watch": "^1.0.2"
 	}
 }

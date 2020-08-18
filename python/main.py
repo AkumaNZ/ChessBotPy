@@ -198,6 +198,7 @@ async def run_engine(uid, ws):
             line = {
                 "multipv": list_index,
                 "score": score,
+                "wdl": score, # Pass the WDL as the score as opening book doesn't have WDL
                 "pv": pv,
                 "lan": lan,
                 "eco": eco.get_name(epd),
@@ -270,11 +271,20 @@ async def run_engine(uid, ws):
             else:
                 score = multi_pv.score.relative.cp
 
+            if settings.config.getboolean("gui", "use_wdl"):
+                wdl = []
+                for v in multi_pv["wdl"]:
+                    wdl.append(str(float(v) / 10) + "%")
+                wdl = " ".join(wdl)
+            else:
+                wdl = None
+
             unit = {
                 "multipv": multi_pv.multipv,
                 "pv": pv,
                 "lan": lan_pv,
                 "score": score,
+                "wdl": wdl,
                 "eco": eco.get_name(epd),
             }
             multipv_data.append(unit)

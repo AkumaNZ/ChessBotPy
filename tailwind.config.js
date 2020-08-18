@@ -1,6 +1,9 @@
 module.exports = {
 	theme: {
-		extend: {},
+		extend: {}
+	},
+	future: {
+		removeDeprecatedGapUtilities: true
 	},
 	variants: [
 		'responsive',
@@ -14,7 +17,7 @@ module.exports = {
 		'focus',
 		'active',
 		'visited',
-		'disabled',
+		'disabled'
 	],
-	plugins: [],
+	plugins: []
 };

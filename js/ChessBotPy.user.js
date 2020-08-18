@@ -543,7 +543,7 @@ const main = async () => {
 		cursor: pointer;
 	}
 	// Generated tailwindcss goes here
-	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}pre{font-family:monospace,monospace;font-size:1em}a{background-color:transparent}b{font-weight:bolder}code{font-family:monospace,monospace;font-size:1em}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}details{display:block}[hidden]{display:none}h1,pre{margin:0}button{background-color:transparent;background-image:none;padding:0}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{box-sizing:border-box;border:0 solid #e2e8f0}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code,pre{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}object,svg{display:block;vertical-align:middle}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-100{--bg-opacity:1;background-color:#f7fafc;background-color:rgba(247,250,252,var(--bg-opacity))}.bg-gray-200{--bg-opacity:1;background-color:#edf2f7;background-color:rgba(237,242,247,var(--bg-opacity))}.bg-gray-700{--bg-opacity:1;background-color:#4a5568;background-color:rgba(74,85,104,var(--bg-opacity))}.bg-gray-800{--bg-opacity:1;background-color:#2d3748;background-color:rgba(45,55,72,var(--bg-opacity))}.bg-gray-900{--bg-opacity:1;background-color:#1a202c;background-color:rgba(26,32,44,var(--bg-opacity))}.bg-indigo-500{--bg-opacity:1;background-color:#667eea;background-color:rgba(102,126,234,var(--bg-opacity))}.hover\\:bg-indigo-600:hover{--bg-opacity:1;background-color:#5a67d8;background-color:rgba(90,103,216,var(--bg-opacity))}.border-gray-500{--border-opacity:1;border-color:#a0aec0;border-color:rgba(160,174,192,var(--border-opacity))}.border-gray-700{--border-opacity:1;border-color:#4a5568;border-color:rgba(74,85,104,var(--border-opacity))}.border-gray-900{--border-opacity:1;border-color:#1a202c;border-color:rgba(26,32,44,var(--border-opacity))}.border-indigo-500{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.hover\\:border-indigo-400:hover{--border-opacity:1;border-color:#7f9cf5;border-color:rgba(127,156,245,var(--border-opacity))}.focus\\:border-indigo-500:focus{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.border{border-width:1px}.cursor-pointer{cursor:pointer}.focus-within\\:cursor-move:focus-within{cursor:move}.first\\:cursor-move:first-child{cursor:move}.last\\:cursor-move:last-child{cursor:move}.odd\\:cursor-move:nth-child(odd){cursor:move}.even\\:cursor-move:nth-child(2n){cursor:move}.hover\\:cursor-move:hover{cursor:move}.focus\\:cursor-move:focus{cursor:move}.active\\:cursor-move:active{cursor:move}.visited\\:cursor-move:visited{cursor:move}.disabled\\:cursor-move:disabled{cursor:move}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.flex-row{flex-direction:row}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-center{justify-content:center}.font-sans{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-10{height:2.5rem}.h-full{height:100%}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.mt-2{margin-top:.5rem}.mr-2{margin-right:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mr-3{margin-right:.75rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{--text-opacity:1;color:#fff;color:rgba(255,255,255,var(--text-opacity))}.text-gray-100{--text-opacity:1;color:#f7fafc;color:rgba(247,250,252,var(--text-opacity))}.text-gray-200{--text-opacity:1;color:#edf2f7;color:rgba(237,242,247,var(--text-opacity))}.text-gray-400{--text-opacity:1;color:#cbd5e0;color:rgba(203,213,224,var(--text-opacity))}.text-gray-500{--text-opacity:1;color:#a0aec0;color:rgba(160,174,192,var(--text-opacity))}.text-gray-600{--text-opacity:1;color:#718096;color:rgba(113,128,150,var(--text-opacity))}.text-gray-700{--text-opacity:1;color:#4a5568;color:rgba(74,85,104,var(--text-opacity))}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.align-bottom{vertical-align:bottom}.visible{visibility:visible}.whitespace-pre-wrap{white-space:pre-wrap}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.w-1{width:.25rem}.w-4{width:1rem}.w-6{width:1.5rem}.w-8{width:2rem}.w-10{width:2.5rem}.w-32{width:8rem}.w-40{width:10rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@media (min-width:640px){.sm\\:cursor-move{cursor:move}.sm\\:focus-within\\:cursor-move:focus-within{cursor:move}.sm\\:first\\:cursor-move:first-child{cursor:move}.sm\\:last\\:cursor-move:last-child{cursor:move}.sm\\:odd\\:cursor-move:nth-child(odd){cursor:move}.sm\\:even\\:cursor-move:nth-child(2n){cursor:move}.sm\\:hover\\:cursor-move:hover{cursor:move}.sm\\:focus\\:cursor-move:focus{cursor:move}.sm\\:active\\:cursor-move:active{cursor:move}.sm\\:visited\\:cursor-move:visited{cursor:move}.sm\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:768px){.md\\:cursor-move{cursor:move}.md\\:focus-within\\:cursor-move:focus-within{cursor:move}.md\\:first\\:cursor-move:first-child{cursor:move}.md\\:last\\:cursor-move:last-child{cursor:move}.md\\:odd\\:cursor-move:nth-child(odd){cursor:move}.md\\:even\\:cursor-move:nth-child(2n){cursor:move}.md\\:hover\\:cursor-move:hover{cursor:move}.md\\:focus\\:cursor-move:focus{cursor:move}.md\\:active\\:cursor-move:active{cursor:move}.md\\:visited\\:cursor-move:visited{cursor:move}.md\\:disabled\\:cursor-move:disabled{cursor:move}}@media (min-width:1024px){.lg\\:cursor-move{cursor:move}.lg\\:focus-within\\:cursor-move:focus-within{cursor:move}.lg\\:first\\:cursor-move:first-child{cursor:move}.lg\\:last\\:cursor-move:last-child{cursor:move}.lg\\:odd\\:cursor-move:nth-child(odd){cursor:move}.lg\\:even\\:cursor-move:nth-child(2n){cursor:move}.lg\\:hover\\:cursor-move:hover{cursor:move}.lg\\:focus\\:cursor-move:focus{cursor:move}.lg\\:active\\:cursor-move:active{cursor:move}.lg\\:visited\\:cursor-move:visited{cursor:move}.lg\\:disabled\\:cursor-move:disabled{cursor:move}.lg\\:overflow-y-auto{overflow-y:auto}}@media (min-width:1280px){.xl\\:cursor-move{cursor:move}.xl\\:focus-within\\:cursor-move:focus-within{cursor:move}.xl\\:first\\:cursor-move:first-child{cursor:move}.xl\\:last\\:cursor-move:last-child{cursor:move}.xl\\:odd\\:cursor-move:nth-child(odd){cursor:move}.xl\\:even\\:cursor-move:nth-child(2n){cursor:move}.xl\\:hover\\:cursor-move:hover{cursor:move}.xl\\:focus\\:cursor-move:focus{cursor:move}.xl\\:active\\:cursor-move:active{cursor:move}.xl\\:visited\\:cursor-move:visited{cursor:move}.xl\\:disabled\\:cursor-move:disabled{cursor:move}}
+	/*! normalize.css v8.0.1 | MIT License | github.com/necolas/normalize.css */html{line-height:1.15;-webkit-text-size-adjust:100%}body{margin:0}main{display:block}h1{font-size:2em;margin:.67em 0}a{background-color:transparent}b{font-weight:bolder}code{font-family:monospace,monospace;font-size:1em}img{border-style:none}button,input,select{font-family:inherit;font-size:100%;line-height:1.15;margin:0}button,input{overflow:visible}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;padding:0}[type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}[type=checkbox],[type=radio]{box-sizing:border-box;padding:0}[type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}[type=search]::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}[hidden],template{display:none}h1{margin:0}button{background-color:transparent;background-image:none}button:focus{outline:1px dotted;outline:5px auto -webkit-focus-ring-color}html{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji;line-height:1.5}*,:after,:before{box-sizing:border-box;border:0 solid #e2e8f0}img{border-style:solid}input::-moz-placeholder{color:#a0aec0}input:-ms-input-placeholder{color:#a0aec0}input::-ms-input-placeholder{color:#a0aec0}input::placeholder{color:#a0aec0}[role=button],button{cursor:pointer}h1{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}button,input,select{padding:0;line-height:inherit;color:inherit}code{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}img,object,svg{display:block;vertical-align:middle}img{max-width:100%;height:auto}.appearance-none{-webkit-appearance:none;-moz-appearance:none;appearance:none}.bg-gray-100{--bg-opacity:1;background-color:#f7fafc;background-color:rgba(247,250,252,var(--bg-opacity))}.bg-gray-500{--bg-opacity:1;background-color:#a0aec0;background-color:rgba(160,174,192,var(--bg-opacity))}.bg-gray-700{--bg-opacity:1;background-color:#4a5568;background-color:rgba(74,85,104,var(--bg-opacity))}.bg-gray-800{--bg-opacity:1;background-color:#2d3748;background-color:rgba(45,55,72,var(--bg-opacity))}.bg-gray-900{--bg-opacity:1;background-color:#1a202c;background-color:rgba(26,32,44,var(--bg-opacity))}.bg-indigo-500{--bg-opacity:1;background-color:#667eea;background-color:rgba(102,126,234,var(--bg-opacity))}.hover\\:bg-indigo-600:hover{--bg-opacity:1;background-color:#5a67d8;background-color:rgba(90,103,216,var(--bg-opacity))}.border-gray-500{--border-opacity:1;border-color:#a0aec0;border-color:rgba(160,174,192,var(--border-opacity))}.border-gray-700{--border-opacity:1;border-color:#4a5568;border-color:rgba(74,85,104,var(--border-opacity))}.border-gray-900{--border-opacity:1;border-color:#1a202c;border-color:rgba(26,32,44,var(--border-opacity))}.border-indigo-500{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.hover\\:border-indigo-400:hover{--border-opacity:1;border-color:#7f9cf5;border-color:rgba(127,156,245,var(--border-opacity))}.focus\\:border-indigo-500:focus{--border-opacity:1;border-color:#667eea;border-color:rgba(102,126,234,var(--border-opacity))}.rounded{border-radius:.25rem}.rounded-full{border-radius:9999px}.border-2{border-width:2px}.border{border-width:1px}.cursor-pointer{cursor:pointer}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.flex-row{flex-direction:row}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-center{justify-content:center}.font-sans{font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,Noto Sans,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol,Noto Color Emoji}.font-serif{font-family:Georgia,Cambria,Times New Roman,Times,serif}.font-mono{font-family:Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-bold{font-weight:700}.h-3{height:.75rem}.h-4{height:1rem}.h-6{height:1.5rem}.h-8{height:2rem}.h-10{height:2.5rem}.text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-4xl{font-size:2.25rem}.mt-2{margin-top:.5rem}.mb-2{margin-bottom:.5rem}.ml-2{margin-left:.5rem}.mr-3{margin-right:.75rem}.mb-3{margin-bottom:.75rem}.mr-4{margin-right:1rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mr-10{margin-right:2.5rem}.outline-none{outline:0}.focus\\:outline-none:focus{outline:0}.p-2{padding:.5rem}.p-3{padding:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-4{padding-left:1rem;padding-right:1rem}.pr-8{padding-right:2rem}.pointer-events-none{pointer-events:none}.absolute{position:absolute}.relative{position:relative}.inset-y-0{top:0;bottom:0}.right-0{right:0}.fill-current{fill:currentColor}.text-white{--text-opacity:1;color:#fff;color:rgba(255,255,255,var(--text-opacity))}.text-gray-100{--text-opacity:1;color:#f7fafc;color:rgba(247,250,252,var(--text-opacity))}.text-gray-200{--text-opacity:1;color:#edf2f7;color:rgba(237,242,247,var(--text-opacity))}.text-gray-400{--text-opacity:1;color:#cbd5e0;color:rgba(203,213,224,var(--text-opacity))}.text-gray-500{--text-opacity:1;color:#a0aec0;color:rgba(160,174,192,var(--text-opacity))}.text-gray-600{--text-opacity:1;color:#718096;color:rgba(113,128,150,var(--text-opacity))}.text-gray-700{--text-opacity:1;color:#4a5568;color:rgba(74,85,104,var(--text-opacity))}.text-gray-800{--text-opacity:1;color:#2d3748;color:rgba(45,55,72,var(--text-opacity))}.text-gray-900{--text-opacity:1;color:#1a202c;color:rgba(26,32,44,var(--text-opacity))}.uppercase{text-transform:uppercase}.tracking-wide{letter-spacing:.025em}.w-4{width:1rem}.w-6{width:1.5rem}.w-10{width:2.5rem}.w-12{width:3rem}.w-48{width:12rem}.w-64{width:16rem}.w-1\\/2{width:50%}.w-full{width:100%}@-webkit-keyframes spin{to{transform:rotate(1turn)}}@keyframes spin{to{transform:rotate(1turn)}}@-webkit-keyframes ping{to{transform:scale(2);opacity:0}}@keyframes ping{75%,to{transform:scale(2);opacity:0}}@keyframes pulse{50%{opacity:.5}}@-webkit-keyframes bounce{to{transform:translateY(-25%);-webkit-animation-timing-function:cubic-bezier(.8,0,1,1);animation-timing-function:cubic-bezier(.8,0,1,1)}}@keyframes bounce{0%,to{transform:translateY(-25%);-webkit-animation-timing-function:cubic-bezier(.8,0,1,1);animation-timing-function:cubic-bezier(.8,0,1,1)}50%{transform:none;-webkit-animation-timing-function:cubic-bezier(0,0,.2,1);animation-timing-function:cubic-bezier(0,0,.2,1)}}@media (min-width:1024px){.lg\\:overflow-y-auto{overflow-y:auto}}
 	`;
 
 	let head = document.getElementsByTagName('head')[0];
@@ -753,6 +753,16 @@ const main = async () => {
 						<div class="inline-flex flex-col mb-4">
 							<label class="checkbox inline-flex cursor-pointer relative mb-2">
 								<input
+									type="checkbox" v-model="useWDL" @change="handleSettingChange($event, 'use_wdl', 'checkbox')"
+									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
+								>
+								<span class="ml-2" title="Show Win-Draw-Loss percentages instead of centipawns">Use WDL</span>
+							</label>
+						</div>
+
+						<div class="inline-flex flex-col mb-4">
+							<label class="checkbox inline-flex cursor-pointer relative mb-2">
+								<input
 									type="checkbox" v-model="pieceOnly" @change="handleSettingChange($event, 'piece_only', 'checkbox')"
 									class="w-6 h-6 bg-gray-900 rounded cursor-pointer outline-none appearance-none"
 								>
@@ -835,12 +845,36 @@ const main = async () => {
 			</div>
 
 			<div id="board" class="flex bg-gray-800 p-3">
-				<div class="flex items-end mr-3 bg-gray-100 w-10" v-if="drawEvalbar" style="min-height: 30vh">
-					<div class="flex items-end justify-center text-sm font-display text-white bg-gray-900 w-10"
-						:style="{ height: evalBarHeight + '%' }">
-						<span class="text-gray-600"> {{ currentScore }} </span>
-					</div>
-				</div>
+				<template v-if="drawEvalbar">
+					<template v-if="useWDL">
+						<div class="flex items-end mr-3 border border-gray-700 w-12" style="min-height: 30vh">
+							<div class="flex items-end justify-center text-sm bg-gray-100 w-12"
+								:style="{ height: WhiteWinChance }">
+								<span class="text-gray-800" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"> {{ WhiteWinChance }} </span>
+							</div>
+						</div>
+						<div class="flex items-end mr-3 border border-gray-700 w-12" style="min-height: 30vh">
+							<div class="flex items-end justify-center text-sm bg-gray-500 w-12"
+								:style="{ height: DrawChance }">
+								<span class="text-gray-900" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"> {{ DrawChance }} </span>
+							</div>
+						</div>
+						<div class="flex items-end mr-3 border border-gray-700 w-12" style="min-height: 30vh">
+							<div class="flex items-end justify-center text-sm bg-gray-900 w-12"
+								:style="{ height: BlackWinChance }">
+								<span class="text-gray-100" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"> {{ BlackWinChance }} </span>
+							</div>
+						</div>
+					</template>
+					<template v-else>
+						<div class="flex items-end mr-3 bg-gray-100 w-10" style="min-height: 30vh">
+							<div class="flex items-end justify-center text-sm font-display text-white bg-gray-900 w-10"
+								:style="{ height: evalBarHeight + '%' }">
+								<span class="text-gray-600" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"> {{ currentScore }} </span>
+							</div>
+						</div>
+					</template>
+				</template>
 				<div class="flex flex-col">
 					<span class='font-display text-gray-200'>{{ currentEco }}</span>
 					<span class='font-display text-gray-200' v-if="pieceOnly">{{ bestPiece }}</span>
@@ -864,7 +898,10 @@ const main = async () => {
 						</div>
 						<div class="text-gray-500 font-display font-bold text-xs uppercase tracking-wide mb-2">
 							PV {{ line.multipv }}
-							<span class="font-sans text-white text-sm ml-2">
+							<span v-if="useWDL" class="font-sans text-white text-sm ml-2">
+								{{ line.wdl }}
+							</span>
+							<span v-else class="font-sans text-white text-sm ml-2">
 								{{ line.score }}
 							</span>
 						</div>
@@ -899,6 +936,7 @@ const main = async () => {
 			multipv: 1,
 			logEngine: '',
 			useBook: true,
+			useWDL: false,
 			drawOverlay: true,
 			drawEvalbar: true,
 			drawPVs: true,
@@ -928,6 +966,33 @@ const main = async () => {
 			},
 			evalBarHeight() {
 				return 100 - (2 / (1 + Math.exp(-0.004 * this.currentScore)) - 1 + 1) * 50;
+			},
+			WhiteWinChance() {
+				if (this.book || !this.pvs.length) {
+					return '33.3%';
+				}
+				let score = this.pvs[0].wdl.split(/\s+/);
+				if (this.turn == BLACK) {
+					return score[2];
+				}
+				return score[0];
+			},
+			BlackWinChance() {
+				if (this.book || !this.pvs.length) {
+					return '33.3%';
+				}
+				let score = this.pvs[0].wdl.split(/\s+/);
+				if (this.turn == WHITE) {
+					return score[2];
+				}
+				return score[0];
+			},
+			DrawChance() {
+				if (this.book || !this.pvs.length) {
+					return '33.3%';
+				}
+				let score = this.pvs[0].wdl.split(/\s+/);
+				return score[1];
 			}
 		},
 		methods: {

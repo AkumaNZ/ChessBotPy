@@ -24,6 +24,7 @@ def initialize_settings_file():
         "multipv": 2,
         "clear_log": True,
         "use_book": True,
+        "use_wdl": False,
         "draw_overlay": True,
         "draw_pvs": True,
         "draw_evalbar": True,
@@ -162,6 +163,7 @@ def get_mapped_settings():
     yield {"key": "nodes", "value": config.getint("gui", "nodes")}
     yield {"key": "logEngine", "value": config.getboolean("gui", "clear_log")}
     yield {"key": "useBook", "value": config.getboolean("gui", "use_book")}
+    yield {"key": "useWDL", "value": config.getboolean("gui", "use_wdl")}
     yield {"key": "drawOverlay", "value": config.getboolean("gui", "draw_overlay")}
     yield {"key": "drawEvalbar", "value": config.getboolean("gui", "draw_evalbar")}
     yield {"key": "drawPVs", "value": config.getboolean("gui", "draw_pvs")}
