@@ -5,6 +5,9 @@ module.exports = {
 	future: {
 		removeDeprecatedGapUtilities: true
 	},
+	experimental: {
+		uniformColorPalette: true
+	},
 	variants: [
 		'responsive',
 		'group-hover',
