@@ -40,7 +40,7 @@ if (window.opener != null) {
 let siteMap = {
 	'lichess.org': {
 		movesSelector: '.rmoves, .tview2',
-		sanSelector: '.rmoves > *:not(.buttons) > [class], move > san',
+		sanSelector: '.rmoves > *:not(.buttons) > *:nth-child(3n-1), .rmoves > *:not(.buttons) > *:nth-child(3n), move > san',
 		overlaySelector: '.cg-wrap',
 		analysisSelector: '.analyse__tools',
 		sideFinder: () => (doc.querySelector('.orientation-white') != null ? WHITE : BLACK)
