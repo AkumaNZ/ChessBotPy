@@ -296,7 +296,7 @@ function drawArrow(svg, move, turn, size) {
 
 const findGame = async () => {
 	await waitForElement(siteMap[host].sanSelector, 1);
-	// Get the side you're plaing as
+	// Get the side you're playing as
 	updateSide();
 	let boardSize = 0;
 	console.log('Starting loop');
@@ -1031,7 +1031,7 @@ const main = async () => {
 		return;
 	}
 
-	console.log('Connection estabished.');
+	console.log('Connection established.');
 	ws.onmessage = function (event) {
 		data = JSON.parse(event.data);
 		switch (data.target) {
