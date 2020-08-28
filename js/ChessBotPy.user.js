@@ -231,14 +231,15 @@ function drawOnScreen() {
 
 	let turn = +app.turn;
 	let lanMoves = app.pvs.map((x) => x.lan);
-	let lanPV = lanMoves[app.selectedPV - 1];
 
-	if (lanPV && lanPV.length > 0) {
-		drawArrow(svg, lanPV[0], turn, width);
-	}
-
-	if (lanPV && lanPV.length > 1) {
-		drawArrow(svg, lanPV[1], (turn + 1) % 2, width);
+	for (i = 0; i < lanMoves.length; i++) {
+		let lanPV = lanMoves[i]
+		if (lanPV && lanPV.length > 0) {
+			drawArrow(svg, lanPV[0], turn, width)
+		}
+		if (lanPV && lanPV.length > 1) {
+			drawArrow(svg, lanPV[1], (turn + 1) % 2, width)
+		}
 	}
 
 	doc.body.appendChild(svg);
